@@ -1,4 +1,4 @@
-package neon
+package utils
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-func clearScreen() {
+func ClearScreen() {
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "windows" {

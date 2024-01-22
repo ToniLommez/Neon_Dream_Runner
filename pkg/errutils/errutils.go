@@ -1,4 +1,4 @@
-package neon
+package errutils
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ func Deal(err error) (fatal error) {
 	if myErr, ok := err.(*ErrorWithPosition); ok {
 		fmt.Fprintf(os.Stderr, "%v\n", myErr)
 	} else {
-		fatal = fmt.Errorf("Fatal Error: %s", err)
+		fatal = fmt.Errorf("fatal error: %s", err)
 	}
 	return
 }
