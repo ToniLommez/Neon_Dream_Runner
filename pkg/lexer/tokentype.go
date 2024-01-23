@@ -3,50 +3,67 @@ package lexer
 type TokenType int
 
 const (
-	SPACE TokenType = iota
+	NONE TokenType = iota
 
 	// Context
-	LEFT_PAREN    // (
-	RIGHT_PAREN   // )
-	LEFT_BRACE    // {
-	RIGHT_BRACE   // }
-	LEFT_DIAMOND  // <
-	RIGHT_DIAMOND // >
-	PIPE          // |
-	DOT           // .
-	COMMA         // ,
-	AT            // @
-	TAG           // #
+	LEFT_PAREN  // (
+	RIGHT_PAREN // )
+	LEFT_BRACE  // {
+	RIGHT_BRACE // }
+	PIPE        // |
+	DOT         // .
+	COMMA       // ,
+	AT          // @
+	TAG         // #
 
 	// Operators
-	MINNUS         // -
-	PLUS           // +
-	SLASH          // /
-	STAR           // *
-	BANG           // !
-	CHECK          // ?
-	COLON          // :
-	SEMICOLON      // ;
-	RANGE_DOT      // ..
-	INCREMENT      // ++
-	DECREMENT      // --
-	ELVIS          // ?:
-	CHECK_NAV      // ?.
-	BANG_NAV       // !.
-	QUOTE          // '
-	PIPELINE_RIGHT // |>
-	PIPELINE_LEFT  // <|
-	GO_IN          // <!
-	GO_OUT         // !>
-	GO_BI          // <!>
+	MINNUS           // -
+	PLUS             // +
+	SLASH            // /
+	STAR             // *
+	POW              // *
+	MOD              // %
+	AND_BITWISE      // &
+	OR_BITWISE       // |
+	XOR_BITWISE      // ^
+	NAND_BITWISE     // ~&
+	NOR_BITWISE      // ~|
+	XNOR_BITWISE     // ~^
+	EQUAL            // ==
+	AND_LOGIC        // &&
+	OR_LOGIC         // ||
+	NOT_BITWISE      // ~
+	LESS             // <
+	GREATER          // >
+	SHIFT_LEFT       // <<
+	SHIFT_RIGHT      // >>
+	ROUNDSHIFT_LEFT  // <<<
+	ROUNDSHIFT_RIGHT // >>>
+	BANG             // !
+	CHECK            // ?
+	COLON            // :
+	SEMICOLON        // ;
+	RANGE_DOT        // ..
+	INCREMENT        // ++
+	DECREMENT        // --
+	ELVIS            // ?:
+	CHECK_NAV        // ?.
+	BANG_NAV         // !.
+	QUOTE            // '
+	PIPELINE_RIGHT   // |>
+	PIPELINE_LEFT    // <|
+	GO_IN            // <!
+	GO_OUT           // !>
+	GO_BI            // <!>
 
 	// Assign
 	ASSIGN                  // =
 	ADD_ASSIGN              // +=
 	SUB_ASSIGN              // -=
 	MUL_ASSIGN              // *=
+	POW_ASSIGN              // **=
 	DIV_ASSIGN              // /=
-	MOD_ASSIGN              // &=
+	MOD_ASSIGN              // %=
 	BITSHIFT_LEFT_ASSIGN    // <<=
 	BITSHIFT_RIGHT_ASSIGN   // >>=
 	ROUNDSHIFT_LEFT_ASSIGN  // <<<=
@@ -83,7 +100,7 @@ const (
 	BEFORE         // before
 	INSIDE         // inside
 	AFTER          // after
-	RETURN         // =>]
+	RETURN         // =>
 	ERROR          // error
 	NIL            // nil
 	CASE           // case
@@ -118,8 +135,6 @@ const (
 
 func (t TokenType) String() string {
 	switch t {
-	case SPACE:
-		return "SPACE"
 	case LEFT_PAREN:
 		return "LEFT_PAREN"
 	case RIGHT_PAREN:
@@ -128,10 +143,6 @@ func (t TokenType) String() string {
 		return "LEFT_BRACE"
 	case RIGHT_BRACE:
 		return "RIGHT_BRACE"
-	case LEFT_DIAMOND:
-		return "LEFT_DIAMOND"
-	case RIGHT_DIAMOND:
-		return "RIGHT_DIAMOND"
 	case PIPE:
 		return "PIPE"
 	case DOT:
@@ -150,6 +161,42 @@ func (t TokenType) String() string {
 		return "SLASH"
 	case STAR:
 		return "STAR"
+	case POW:
+		return "POW"
+	case MOD:
+		return "MOD"
+	case AND_BITWISE:
+		return "AND_BITWISE"
+	case OR_BITWISE:
+		return "OR_BITWISE"
+	case XOR_BITWISE:
+		return "XOR_BITWISE"
+	case NAND_BITWISE:
+		return "NAND_BITWISE"
+	case NOR_BITWISE:
+		return "NOR_BITWISE"
+	case XNOR_BITWISE:
+		return "XNOR_BITWISE"
+	case EQUAL:
+		return "EQUAL"
+	case AND_LOGIC:
+		return "AND_LOGIC"
+	case OR_LOGIC:
+		return "OR_LOGIC"
+	case NOT_BITWISE:
+		return "NOT_BITWISE"
+	case LESS:
+		return "LESS"
+	case GREATER:
+		return "GREATER"
+	case SHIFT_LEFT:
+		return "SHIFT_LEFT"
+	case SHIFT_RIGHT:
+		return "SHIFT_RIGHT"
+	case ROUNDSHIFT_LEFT:
+		return "ROUNDSHIFT_LEFT"
+	case ROUNDSHIFT_RIGHT:
+		return "ROUNDSHIFT_RIGHT"
 	case BANG:
 		return "BANG"
 	case CHECK:
@@ -190,6 +237,8 @@ func (t TokenType) String() string {
 		return "SUB_ASSIGN"
 	case MUL_ASSIGN:
 		return "MUL_ASSIGN"
+	case POW_ASSIGN:
+		return "POW_ASSIGN"
 	case DIV_ASSIGN:
 		return "DIV_ASSIGN"
 	case MOD_ASSIGN:

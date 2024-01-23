@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	"github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
 
@@ -21,9 +22,7 @@ func runFile(path string) error {
 		return fmt.Errorf("erro reading file: %s", err)
 	}
 
-	fmt.Println(string(content))
-
-	return nil
+	return run(string(content))
 }
 
 func runPrompt() (err error) {
@@ -31,35 +30,47 @@ func runPrompt() (err error) {
 
 	for {
 		fmt.Print("> ")
-		input := s.Text()
+		if s.Scan() {
+			input := s.Text()
 
-		switch input {
-		case "exit":
-			return nil
-		case "clear":
-			utils.ClearScreen()
-		default:
-			err = run(input)
-			if err != nil {
-				fatal := errutils.Deal(err)
-				if fatal != nil {
-					return fatal
+			switch input {
+			case "exit":
+				return nil
+			case "clear":
+				utils.ClearScreen()
+			default:
+				err = run(input)
+				if err != nil {
+					fatal := errutils.Deal(err)
+					if fatal != nil {
+						return fatal
+					}
 				}
 			}
+		} else {
+			return s.Err() // Retorna um erro se a leitura falhar
 		}
 	}
 }
 
 func run(input string) error {
-	fmt.Println(input)
+	s := lexer.NewScanner(input)
+	ts, err := s.ScanTokens()
+	if err != nil {
+		return err
+	}
+	for _, t := range ts {
+		fmt.Printf("%s ", t)
+	}
+	fmt.Printf("\n")
 	return nil
 }
 
 func main() {
-	if len(os.Args) > 1 {
+	if len(os.Args) > 2 {
 		os.Exit(64) //TODO: better response
-	} else if len(os.Args) == 1 {
-		if err := runFile(os.Args[0]); err != nil {
+	} else if len(os.Args) == 2 {
+		if err := runFile(os.Args[1]); err != nil {
 			fmt.Println(err)
 		}
 	} else {

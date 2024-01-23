@@ -5,19 +5,27 @@ import (
 	"os"
 )
 
-type ErrorWithPosition struct {
-	Line    int
-	Column  int
-	Message string
+type neonError struct {
+	line    int
+	column  int
+	message string
 }
 
-func (e *ErrorWithPosition) Error() string {
-	return fmt.Sprintf("[Line %d, Column %d] Error: %s", e.Line, e.Column, e.Message)
+func (e neonError) Error() string {
+	return fmt.Sprintf("[Line %d, Column %d] %s", e.line, e.column, e.message)
+}
+
+func Error(line int, column int, message string) error {
+	return neonError{
+		line:    line,
+		column:  column,
+		message: message,
+	}
 }
 
 func Deal(err error) (fatal error) {
-	if myErr, ok := err.(*ErrorWithPosition); ok {
-		fmt.Fprintf(os.Stderr, "%v\n", myErr)
+	if myErr, ok := err.(neonError); ok {
+		fmt.Fprintf(os.Stderr, "%s\n", myErr)
 	} else {
 		fatal = fmt.Errorf("fatal error: %s", err)
 	}
