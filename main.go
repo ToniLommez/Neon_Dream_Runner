@@ -61,6 +61,9 @@ func run(input string) error {
 	}
 	for _, t := range ts {
 		fmt.Printf("%s ", t)
+		if t.Type == lexer.NEW_LINE {
+			fmt.Println()
+		}
 	}
 	fmt.Printf("\n")
 	return nil

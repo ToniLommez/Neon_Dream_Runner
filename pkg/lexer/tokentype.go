@@ -3,7 +3,7 @@ package lexer
 type TokenType int
 
 const (
-	NONE TokenType = iota
+	NEW_LINE TokenType = iota
 
 	// Context
 	LEFT_PAREN  // (
@@ -135,6 +135,8 @@ const (
 
 func (t TokenType) String() string {
 	switch t {
+	case NEW_LINE:
+		return "NEW_LINE"
 	case LEFT_PAREN:
 		return "LEFT_PAREN"
 	case RIGHT_PAREN:

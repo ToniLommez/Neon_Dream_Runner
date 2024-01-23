@@ -299,6 +299,7 @@ func (s *Scanner) scanToken() (err error) {
 	case '\n':
 		s.line++
 		s.column = 0
+		s.addToken(NEW_LINE, nil)
 	case ' ':
 	case '\r':
 	case '\t':
