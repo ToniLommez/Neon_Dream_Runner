@@ -14,15 +14,13 @@ type Token struct {
 }
 
 func (t Token) String() (str string) {
-	if t.Type == NEW_LINE {
-		str = fmt.Sprintf("[%s]", t.Type)
-	} else if t.Type != EOF {
+	if t.Type != EOF && t.Type != NEW_LINE {
 		lexeme := strings.Replace(t.Lexeme, "\n", "\\n", -1)
 		lexeme = strings.Replace(lexeme, "\t", "\\t", -1)
 		if t.Literal == nil {
 			str = fmt.Sprintf("[%s, %s]", t.Type, lexeme)
 		} else {
-			str = fmt.Sprintf("[%s, %s, %q]", t.Type, lexeme, t.Literal)
+			str = fmt.Sprintf("[%s, %s, %v]", t.Type, lexeme, t.Literal)
 		}
 	}
 	return

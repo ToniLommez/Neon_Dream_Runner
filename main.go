@@ -27,6 +27,7 @@ func runFile(path string) error {
 
 func runPrompt() (err error) {
 	s := bufio.NewScanner(os.Stdin)
+	prompt := ""
 
 	for {
 		fmt.Print("> ")
@@ -38,14 +39,17 @@ func runPrompt() (err error) {
 				return nil
 			case "clear":
 				utils.ClearScreen()
-			default:
-				err = run(input)
+			case "":
+				err = run(prompt)
+				prompt = ""
 				if err != nil {
 					fatal := errutils.Deal(err)
 					if fatal != nil {
 						return fatal
 					}
 				}
+			default:
+				prompt += input + "\n"
 			}
 		} else {
 			return s.Err() // Retorna um erro se a leitura falhar

@@ -1,365 +1,205 @@
 package lexer
 
-type TokenType int
+type TokenType string
+
+var keywords = map[string]TokenType{
+	"let":     LET,
+	"let!":    LET_BANG,
+	"let?":    LET_CHECK,
+	"let!?":   LET_BANG_CHECK,
+	"fn":      FN,
+	"asm":     ASM,
+	"for":     FOR,
+	"loop":    LOOP,
+	"while":   WHILE,
+	"until":   UNTIL,
+	"do":      DO,
+	"in":      IN,
+	"pulse":   PULSE,
+	"before":  BEFORE,
+	"inside":  INSIDE,
+	"after":   AFTER,
+	"error":   ERROR,
+	"nil":     NIL,
+	"case":    CASE,
+	"of":      OF,
+	"if":      IF,
+	"else":    ELSE,
+	"elif":    ELIF,
+	"use":     USE,
+	"as":      AS,
+	"merge":   MERGE,
+	"obj":     OBJ,
+	"pub":     PUB,
+	"when":    WHEN,
+	"trigger": TRIGGER,
+	"trait":   TRAIT,
+	"this":    THIS,
+
+	"print":   PRINT,
+	"printf":  PRINTF,
+	"println": PRINTLN,
+
+	"true":  TRUE,
+	"false": FALSE,
+
+	"int":     INT,
+	"int8":    INT8,
+	"int16":   INT16,
+	"int32":   INT32,
+	"int64":   INT64,
+	"uint":    UINT,
+	"uint8":   UINT8,
+	"uint16":  UINT16,
+	"uint32":  UINT32,
+	"uint64":  UINT64,
+	"float":   FLOAT,
+	"float32": FLOAT32,
+	"float64": FLOAT64,
+	"bool":    BOOL,
+	"char":    CHAR,
+	"string":  STRING,
+	"byte":    BYTE,
+	"any":     ANY,
+}
 
 const (
-	NEW_LINE TokenType = iota
+	NEW_LINE TokenType = "NEW_LINE"
 
 	// Context
-	LEFT_PAREN  // (
-	RIGHT_PAREN // )
-	LEFT_BRACE  // {
-	RIGHT_BRACE // }
-	PIPE        // |
-	DOT         // .
-	COMMA       // ,
-	AT          // @
-	TAG         // #
+	LEFT_PAREN  TokenType = "LEFT_PAREN"  // (
+	RIGHT_PAREN TokenType = "RIGHT_PAREN" // )
+	LEFT_BRACE  TokenType = "LEFT_BRACE"  // {
+	RIGHT_BRACE TokenType = "RIGHT_BRACE" // }
+	PIPE        TokenType = "PIPE"        // |
+	DOT         TokenType = "DOT"         // .
+	COMMA       TokenType = "COMMA"       // ,
+	AT          TokenType = "AT"          // @
+	TAG         TokenType = "TAG"         // #
 
 	// Operators
-	MINNUS           // -
-	PLUS             // +
-	SLASH            // /
-	STAR             // *
-	POW              // *
-	MOD              // %
-	AND_BITWISE      // &
-	OR_BITWISE       // |
-	XOR_BITWISE      // ^
-	NAND_BITWISE     // ~&
-	NOR_BITWISE      // ~|
-	XNOR_BITWISE     // ~^
-	EQUAL            // ==
-	AND_LOGIC        // &&
-	OR_LOGIC         // ||
-	NOT_BITWISE      // ~
-	LESS             // <
-	GREATER          // >
-	SHIFT_LEFT       // <<
-	SHIFT_RIGHT      // >>
-	ROUNDSHIFT_LEFT  // <<<
-	ROUNDSHIFT_RIGHT // >>>
-	BANG             // !
-	CHECK            // ?
-	COLON            // :
-	SEMICOLON        // ;
-	RANGE_DOT        // ..
-	INCREMENT        // ++
-	DECREMENT        // --
-	ELVIS            // ?:
-	CHECK_NAV        // ?.
-	BANG_NAV         // !.
-	QUOTE            // '
-	PIPELINE_RIGHT   // |>
-	PIPELINE_LEFT    // <|
-	GO_IN            // <!
-	GO_OUT           // !>
-	GO_BI            // <!>
+	MINNUS           TokenType = "MINNUS"           // -
+	PLUS             TokenType = "PLUS"             // +
+	SLASH            TokenType = "SLASH"            // /
+	STAR             TokenType = "STAR"             // *
+	POW              TokenType = "POW"              // *
+	MOD              TokenType = "MOD"              // %
+	AND_BITWISE      TokenType = "AND_BITWISE"      // &
+	OR_BITWISE       TokenType = "OR_BITWISE"       // |
+	XOR_BITWISE      TokenType = "XOR_BITWISE"      // ^
+	NAND_BITWISE     TokenType = "NAND_BITWISE"     // ~&
+	NOR_BITWISE      TokenType = "NOR_BITWISE"      // ~|
+	XNOR_BITWISE     TokenType = "XNOR_BITWISE"     // ~^
+	EQUAL            TokenType = "EQUAL"            // ==
+	AND_LOGIC        TokenType = "AND_LOGIC"        // &&
+	OR_LOGIC         TokenType = "OR_LOGIC"         // ||
+	NOT_BITWISE      TokenType = "NOT_BITWISE"      // ~
+	LESS             TokenType = "LESS"             // <
+	GREATER          TokenType = "GREATER"          // >
+	SHIFT_LEFT       TokenType = "SHIFT_LEFT"       // <<
+	SHIFT_RIGHT      TokenType = "SHIFT_RIGHT"      // >>
+	ROUNDSHIFT_LEFT  TokenType = "ROUNDSHIFT_LEFT"  // <<<
+	ROUNDSHIFT_RIGHT TokenType = "ROUNDSHIFT_RIGHT" // >>>
+	BANG             TokenType = "BANG"             // !
+	CHECK            TokenType = "CHECK"            // ?
+	COLON            TokenType = "COLON"            // :
+	SEMICOLON        TokenType = "SEMICOLON"        // ;
+	RANGE_DOT        TokenType = "RANGE_DOT"        // ..
+	INCREMENT        TokenType = "INCREMENT"        // ++
+	DECREMENT        TokenType = "DECREMENT"        // --
+	ELVIS            TokenType = "ELVIS"            // ?:
+	CHECK_NAV        TokenType = "CHECK_NAV"        // ?.
+	BANG_NAV         TokenType = "BANG_NAV"         // !.
+	QUOTE            TokenType = "QUOTE"            // '
+	PIPELINE_RIGHT   TokenType = "PIPELINE_RIGHT"   // |>
+	PIPELINE_LEFT    TokenType = "PIPELINE_LEFT"    // <|
+	GO_IN            TokenType = "GO_IN"            // <!
+	GO_OUT           TokenType = "GO_OUT"           // !>
+	GO_BI            TokenType = "GO_BI"            // <!>
+	RETURN           TokenType = "RETURN"           // =>
 
 	// Assign
-	ASSIGN                  // =
-	ADD_ASSIGN              // +=
-	SUB_ASSIGN              // -=
-	MUL_ASSIGN              // *=
-	POW_ASSIGN              // **=
-	DIV_ASSIGN              // /=
-	MOD_ASSIGN              // %=
-	BITSHIFT_LEFT_ASSIGN    // <<=
-	BITSHIFT_RIGHT_ASSIGN   // >>=
-	ROUNDSHIFT_LEFT_ASSIGN  // <<<=
-	ROUNDSHIFT_RIGHT_ASSIGN // >>>=
-	NOT_ASSIGN              // !=
-	AND_ASSIGN              // &=
-	NAND_ASSIGN             // ~&=
-	OR_ASSIGN               // |=
-	NOR_ASSIGN              // ~|=
-	XOR_ASSIGN              // ^=
-	XNOR_ASSIGN             // ~^=
+	ASSIGN                  TokenType = "ASSIGN"                  // =
+	ADD_ASSIGN              TokenType = "ADD_ASSIGN"              // +=
+	SUB_ASSIGN              TokenType = "SUB_ASSIGN"              // -=
+	MUL_ASSIGN              TokenType = "MUL_ASSIGN"              // *=
+	POW_ASSIGN              TokenType = "POW_ASSIGN"              // **=
+	DIV_ASSIGN              TokenType = "DIV_ASSIGN"              // /=
+	MOD_ASSIGN              TokenType = "MOD_ASSIGN"              // %=
+	BITSHIFT_LEFT_ASSIGN    TokenType = "BITSHIFT_LEFT_ASSIGN"    // <<=
+	BITSHIFT_RIGHT_ASSIGN   TokenType = "BITSHIFT_RIGHT_ASSIGN"   // >>=
+	ROUNDSHIFT_LEFT_ASSIGN  TokenType = "ROUNDSHIFT_LEFT_ASSIGN"  // <<<=
+	ROUNDSHIFT_RIGHT_ASSIGN TokenType = "ROUNDSHIFT_RIGHT_ASSIGN" // >>>=
+	NOT_ASSIGN              TokenType = "NOT_ASSIGN"              // !=
+	AND_ASSIGN              TokenType = "AND_ASSIGN"              // &=
+	NAND_ASSIGN             TokenType = "NAND_ASSIGN"             // ~&=
+	OR_ASSIGN               TokenType = "OR_ASSIGN"               // |=
+	NOR_ASSIGN              TokenType = "NOR_ASSIGN"              // ~|=
+	XOR_ASSIGN              TokenType = "XOR_ASSIGN"              // ^=
+	XNOR_ASSIGN             TokenType = "XNOR_ASSIGN"             // ~^=
 
 	// Literals
-	IDENTIFIER // function_name
-	STRING     // "abc"
-	CHAR       // 'a'
-	NUMBER     // 12
-	COMMENT    // /* */ //
+	IDENTIFIER     TokenType = "IDENTIFIER"     // function_name
+	STRING_LITERAL TokenType = "STRING_LITERAL" // "abc"
+	NUMBER_LITERAL TokenType = "NUMBER_LITERAL" // 12
+	FLOAT_LITERAL  TokenType = "FLOAT_LITERAL"  // 12.3
 
-	// Keywords
-	LET            // let
-	LET_BANG       // let!
-	LET_CHECK      // let?
-	LET_BANG_CHECK // let!?
-	FN             // fn
-	ASM            // asm
-	FOR            // for
-	LOOP           // loop
-	WHILE          // while
-	UNTIL          // until
-	DO             // do
-	IN             // in
-	PULSE          // pulse
-	BEFORE         // before
-	INSIDE         // inside
-	AFTER          // after
-	RETURN         // =>
-	ERROR          // error
-	NIL            // nil
-	CASE           // case
-	OF             // of
-	IF             // if
-	ELSE           // else
-	ELIF           // elif
-	USE            // use
-	AS             // as
-	MERGE          // merge
-	OBJ            // obj
-	PUB            // pub
-	WHEN           // when
-	TRIGGER        // trigger
-	TRAIT          // trait
-	THIS           // this
-
-	// Reserved
-	PRINT
-	TRUE
-	FALSE
-
-	// Types
-	BOOL
-	INT
-	FLOAT
-	ANY
+	LET            TokenType = "LET"     // let
+	LET_BANG       TokenType = "LET!"    // let
+	LET_CHECK      TokenType = "LET?"    // let
+	LET_BANG_CHECK TokenType = "LET!?"   // let
+	FN             TokenType = "FN"      // fn
+	ASM            TokenType = "ASM"     // asm
+	FOR            TokenType = "FOR"     // for
+	LOOP           TokenType = "LOOP"    // loop
+	WHILE          TokenType = "WHILE"   // while
+	UNTIL          TokenType = "UNTIL"   // until
+	DO             TokenType = "DO"      // do
+	IN             TokenType = "IN"      // in
+	PULSE          TokenType = "PULSE"   // pulse
+	BEFORE         TokenType = "BEFORE"  // before
+	INSIDE         TokenType = "INSIDE"  // inside
+	AFTER          TokenType = "AFTER"   // after
+	ERROR          TokenType = "ERROR"   // error
+	NIL            TokenType = "NIL"     // nil
+	CASE           TokenType = "CASE"    // case
+	OF             TokenType = "OF"      // of
+	IF             TokenType = "IF"      // if
+	ELSE           TokenType = "ELSE"    // else
+	ELIF           TokenType = "ELIF"    // elif
+	USE            TokenType = "USE"     // use
+	AS             TokenType = "AS"      // as
+	MERGE          TokenType = "MERGE"   // merge
+	OBJ            TokenType = "OBJ"     // obj
+	PUB            TokenType = "PUB"     // pub
+	WHEN           TokenType = "WHEN"    // when
+	TRIGGER        TokenType = "TRIGGER" // trigger
+	TRAIT          TokenType = "TRAIT"   // trait
+	THIS           TokenType = "THIS"    // this
+	PRINT          TokenType = "PRINT"   // print
+	PRINTF         TokenType = "PRINTF"  // printf
+	PRINTLN        TokenType = "PRINTLN" // println
+	TRUE           TokenType = "TRUE"    // true
+	FALSE          TokenType = "FALSE"   // false
+	INT            TokenType = "INT"     // int
+	INT8           TokenType = "INT8"    // int8
+	INT16          TokenType = "INT16"   // int16
+	INT32          TokenType = "INT32"   // int32
+	INT64          TokenType = "INT64"   // int64
+	UINT           TokenType = "UINT"    // uint
+	UINT8          TokenType = "UINT8"   // uint8
+	UINT16         TokenType = "UINT16"  // uint16
+	UINT32         TokenType = "UINT32"  // uint32
+	UINT64         TokenType = "UINT64"  // uint64
+	FLOAT          TokenType = "FLOAT"   // float
+	FLOAT32        TokenType = "FLOAT32" // float32
+	FLOAT64        TokenType = "FLOAT64" // float64
+	BOOL           TokenType = "BOOL"    // bool
+	CHAR           TokenType = "CHAR"    // char
+	STRING         TokenType = "STRING"  // string
+	BYTE           TokenType = "BYTE"    // byte
+	ANY            TokenType = "ANY"     // any
 
 	// Special
-	EOF
+	EOF TokenType = "eof" // EOF
 )
-
-func (t TokenType) String() string {
-	switch t {
-	case NEW_LINE:
-		return "NEW_LINE"
-	case LEFT_PAREN:
-		return "LEFT_PAREN"
-	case RIGHT_PAREN:
-		return "RIGHT_PAREN"
-	case LEFT_BRACE:
-		return "LEFT_BRACE"
-	case RIGHT_BRACE:
-		return "RIGHT_BRACE"
-	case PIPE:
-		return "PIPE"
-	case DOT:
-		return "DOT"
-	case COMMA:
-		return "COMMA"
-	case AT:
-		return "AT"
-	case TAG:
-		return "TAG"
-	case MINNUS:
-		return "MINNUS"
-	case PLUS:
-		return "PLUS"
-	case SLASH:
-		return "SLASH"
-	case STAR:
-		return "STAR"
-	case POW:
-		return "POW"
-	case MOD:
-		return "MOD"
-	case AND_BITWISE:
-		return "AND_BITWISE"
-	case OR_BITWISE:
-		return "OR_BITWISE"
-	case XOR_BITWISE:
-		return "XOR_BITWISE"
-	case NAND_BITWISE:
-		return "NAND_BITWISE"
-	case NOR_BITWISE:
-		return "NOR_BITWISE"
-	case XNOR_BITWISE:
-		return "XNOR_BITWISE"
-	case EQUAL:
-		return "EQUAL"
-	case AND_LOGIC:
-		return "AND_LOGIC"
-	case OR_LOGIC:
-		return "OR_LOGIC"
-	case NOT_BITWISE:
-		return "NOT_BITWISE"
-	case LESS:
-		return "LESS"
-	case GREATER:
-		return "GREATER"
-	case SHIFT_LEFT:
-		return "SHIFT_LEFT"
-	case SHIFT_RIGHT:
-		return "SHIFT_RIGHT"
-	case ROUNDSHIFT_LEFT:
-		return "ROUNDSHIFT_LEFT"
-	case ROUNDSHIFT_RIGHT:
-		return "ROUNDSHIFT_RIGHT"
-	case BANG:
-		return "BANG"
-	case CHECK:
-		return "CHECK"
-	case COLON:
-		return "COLON"
-	case SEMICOLON:
-		return "SEMICOLON"
-	case RANGE_DOT:
-		return "RANGE_DOT"
-	case INCREMENT:
-		return "INCREMENT"
-	case DECREMENT:
-		return "DECREMENT"
-	case ELVIS:
-		return "ELVIS"
-	case CHECK_NAV:
-		return "CHECK_NAV"
-	case BANG_NAV:
-		return "BANG_NAV"
-	case QUOTE:
-		return "QUOTE"
-	case PIPELINE_RIGHT:
-		return "PIPELINE_RIGHT"
-	case PIPELINE_LEFT:
-		return "PIPELINE_LEFT"
-	case GO_IN:
-		return "GO_IN"
-	case GO_OUT:
-		return "GO_OUT"
-	case GO_BI:
-		return "GO_BI"
-	case ASSIGN:
-		return "ASSIGN"
-	case ADD_ASSIGN:
-		return "ADD_ASSIGN"
-	case SUB_ASSIGN:
-		return "SUB_ASSIGN"
-	case MUL_ASSIGN:
-		return "MUL_ASSIGN"
-	case POW_ASSIGN:
-		return "POW_ASSIGN"
-	case DIV_ASSIGN:
-		return "DIV_ASSIGN"
-	case MOD_ASSIGN:
-		return "MOD_ASSIGN"
-	case BITSHIFT_LEFT_ASSIGN:
-		return "BITSHIFT_LEFT_ASSIGN"
-	case BITSHIFT_RIGHT_ASSIGN:
-		return "BITSHIFT_RIGHT_ASSIGN"
-	case ROUNDSHIFT_LEFT_ASSIGN:
-		return "ROUNDSHIFT_LEFT_ASSIGN"
-	case ROUNDSHIFT_RIGHT_ASSIGN:
-		return "ROUNDSHIFT_RIGHT_ASSIGN"
-	case NOT_ASSIGN:
-		return "NOT_ASSIGN"
-	case AND_ASSIGN:
-		return "AND_ASSIGN"
-	case NAND_ASSIGN:
-		return "NAND_ASSIGN"
-	case OR_ASSIGN:
-		return "OR_ASSIGN"
-	case NOR_ASSIGN:
-		return "NOR_ASSIGN"
-	case XOR_ASSIGN:
-		return "XOR_ASSIGN"
-	case XNOR_ASSIGN:
-		return "XNOR_ASSIGN"
-	case IDENTIFIER:
-		return "IDENTIFIER"
-	case STRING:
-		return "STRING"
-	case CHAR:
-		return "CHAR"
-	case NUMBER:
-		return "NUMBER"
-	case COMMENT:
-		return "COMMENT"
-	case LET:
-		return "LET"
-	case LET_BANG:
-		return "LET_BANG"
-	case LET_CHECK:
-		return "LET_CHECK"
-	case LET_BANG_CHECK:
-		return "LET_BANG_CHECK"
-	case FN:
-		return "FN"
-	case ASM:
-		return "ASM"
-	case FOR:
-		return "FOR"
-	case LOOP:
-		return "LOOP"
-	case WHILE:
-		return "WHILE"
-	case UNTIL:
-		return "UNTIL"
-	case DO:
-		return "DO"
-	case IN:
-		return "IN"
-	case PULSE:
-		return "PULSE"
-	case BEFORE:
-		return "BEFORE"
-	case INSIDE:
-		return "INSIDE"
-	case AFTER:
-		return "AFTER"
-	case RETURN:
-		return "RETURN"
-	case ERROR:
-		return "ERROR"
-	case NIL:
-		return "NIL"
-	case CASE:
-		return "CASE"
-	case OF:
-		return "OF"
-	case IF:
-		return "IF"
-	case ELSE:
-		return "ELSE"
-	case ELIF:
-		return "ELIF"
-	case USE:
-		return "USE"
-	case AS:
-		return "AS"
-	case MERGE:
-		return "MERGE"
-	case OBJ:
-		return "OBJ"
-	case PUB:
-		return "PUB"
-	case WHEN:
-		return "WHEN"
-	case TRIGGER:
-		return "TRIGGER"
-	case TRAIT:
-		return "TRAIT"
-	case THIS:
-		return "THIS"
-	case PRINT:
-		return "PRINT"
-	case TRUE:
-		return "TRUE"
-	case FALSE:
-		return "FALSE"
-	case BOOL:
-		return "BOOL"
-	case INT:
-		return "INT"
-	case FLOAT:
-		return "FLOAT"
-	case ANY:
-		return "ANY"
-	case EOF:
-		return "EOF"
-	default:
-		return "UNKNOWN"
-	}
-}
