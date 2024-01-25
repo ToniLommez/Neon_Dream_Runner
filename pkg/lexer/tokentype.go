@@ -2,67 +2,6 @@ package lexer
 
 type TokenType string
 
-var keywords = map[string]TokenType{
-	"let":     LET,
-	"let!":    LET_BANG,
-	"let?":    LET_CHECK,
-	"let!?":   LET_BANG_CHECK,
-	"fn":      FN,
-	"asm":     ASM,
-	"for":     FOR,
-	"loop":    LOOP,
-	"while":   WHILE,
-	"until":   UNTIL,
-	"do":      DO,
-	"in":      IN,
-	"pulse":   PULSE,
-	"before":  BEFORE,
-	"inside":  INSIDE,
-	"after":   AFTER,
-	"error":   ERROR,
-	"nil":     NIL,
-	"case":    CASE,
-	"of":      OF,
-	"if":      IF,
-	"else":    ELSE,
-	"elif":    ELIF,
-	"use":     USE,
-	"as":      AS,
-	"merge":   MERGE,
-	"obj":     OBJ,
-	"pub":     PUB,
-	"when":    WHEN,
-	"trigger": TRIGGER,
-	"trait":   TRAIT,
-	"this":    THIS,
-
-	"print":   PRINT,
-	"printf":  PRINTF,
-	"println": PRINTLN,
-
-	"true":  TRUE,
-	"false": FALSE,
-
-	"int":     INT,
-	"int8":    INT8,
-	"int16":   INT16,
-	"int32":   INT32,
-	"int64":   INT64,
-	"uint":    UINT,
-	"uint8":   UINT8,
-	"uint16":  UINT16,
-	"uint32":  UINT32,
-	"uint64":  UINT64,
-	"float":   FLOAT,
-	"float32": FLOAT32,
-	"float64": FLOAT64,
-	"bool":    BOOL,
-	"char":    CHAR,
-	"string":  STRING,
-	"byte":    BYTE,
-	"any":     ANY,
-}
-
 const (
 	NEW_LINE TokenType = "NEW_LINE"
 

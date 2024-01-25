@@ -180,36 +180,6 @@ func (s *Scanner) identifier() {
 func (s *Scanner) scanToken() (err error) {
 	c := s.advance()
 
-	var complexTokens = map[byte]struct {
-		patterns   []string
-		tokenTypes []TokenType
-	}{
-		'(':  {[]string{}, []TokenType{LEFT_PAREN}},
-		')':  {[]string{}, []TokenType{RIGHT_PAREN}},
-		'{':  {[]string{}, []TokenType{LEFT_BRACE}},
-		'}':  {[]string{}, []TokenType{RIGHT_BRACE}},
-		':':  {[]string{}, []TokenType{COLON}},
-		';':  {[]string{}, []TokenType{SEMICOLON}},
-		'\'': {[]string{}, []TokenType{QUOTE}},
-		',':  {[]string{}, []TokenType{COMMA}},
-		'@':  {[]string{}, []TokenType{AT}},
-		'#':  {[]string{}, []TokenType{TAG}},
-		'.':  {[]string{"."}, []TokenType{RANGE_DOT, DOT}},
-		'+':  {[]string{"+", "="}, []TokenType{INCREMENT, ADD_ASSIGN, PLUS}},
-		'-':  {[]string{"-", "="}, []TokenType{DECREMENT, SUB_ASSIGN, MINNUS}},
-		'*':  {[]string{"**=", "**", "*="}, []TokenType{POW_ASSIGN, POW, MUL_ASSIGN, STAR}},
-		'%':  {[]string{"="}, []TokenType{MOD_ASSIGN, MOD}},
-		'&':  {[]string{"&", "="}, []TokenType{AND_LOGIC, AND_ASSIGN, AND_BITWISE}},
-		'|':  {[]string{"|", ">", "="}, []TokenType{OR_LOGIC, PIPELINE_RIGHT, OR_ASSIGN, OR_BITWISE}},
-		'^':  {[]string{"="}, []TokenType{XOR_ASSIGN, XOR_BITWISE}},
-		'~':  {[]string{"&=", "&", "|=", "|", "^=", "^"}, []TokenType{NAND_ASSIGN, NAND_BITWISE, NOR_ASSIGN, NOR_BITWISE, XNOR_ASSIGN, XNOR_BITWISE, NOT_BITWISE}},
-		'<':  {[]string{"|", "!>", "!", "<=", "<<=", "<<", "<"}, []TokenType{PIPELINE_LEFT, GO_BI, GO_IN, BITSHIFT_LEFT_ASSIGN, ROUNDSHIFT_LEFT_ASSIGN, ROUNDSHIFT_LEFT, SHIFT_LEFT, LESS}},
-		'>':  {[]string{">=", ">>=", ">>", ">"}, []TokenType{BITSHIFT_RIGHT_ASSIGN, ROUNDSHIFT_RIGHT_ASSIGN, ROUNDSHIFT_RIGHT, SHIFT_RIGHT, GREATER}},
-		'!':  {[]string{".", ">", "="}, []TokenType{BANG_NAV, GO_OUT, NOT_ASSIGN, BANG}},
-		'?':  {[]string{".", ":"}, []TokenType{CHECK_NAV, ELVIS, CHECK}},
-		'=':  {[]string{">", "="}, []TokenType{RETURN, EQUAL, ASSIGN}},
-	}
-
 	if t, ok := complexTokens[c]; ok {
 		s.switchToken(t.patterns, t.tokenTypes)
 		return
@@ -252,4 +222,34 @@ func (s *Scanner) scanToken() (err error) {
 	}
 
 	return
+}
+
+var complexTokens = map[byte]struct {
+	patterns   []string
+	tokenTypes []TokenType
+}{
+	'(':  {[]string{}, []TokenType{LEFT_PAREN}},
+	')':  {[]string{}, []TokenType{RIGHT_PAREN}},
+	'{':  {[]string{}, []TokenType{LEFT_BRACE}},
+	'}':  {[]string{}, []TokenType{RIGHT_BRACE}},
+	':':  {[]string{}, []TokenType{COLON}},
+	';':  {[]string{}, []TokenType{SEMICOLON}},
+	'\'': {[]string{}, []TokenType{QUOTE}},
+	',':  {[]string{}, []TokenType{COMMA}},
+	'@':  {[]string{}, []TokenType{AT}},
+	'#':  {[]string{}, []TokenType{TAG}},
+	'.':  {[]string{"."}, []TokenType{RANGE_DOT, DOT}},
+	'+':  {[]string{"+", "="}, []TokenType{INCREMENT, ADD_ASSIGN, PLUS}},
+	'-':  {[]string{"-", "="}, []TokenType{DECREMENT, SUB_ASSIGN, MINNUS}},
+	'*':  {[]string{"**=", "**", "*="}, []TokenType{POW_ASSIGN, POW, MUL_ASSIGN, STAR}},
+	'%':  {[]string{"="}, []TokenType{MOD_ASSIGN, MOD}},
+	'&':  {[]string{"&", "="}, []TokenType{AND_LOGIC, AND_ASSIGN, AND_BITWISE}},
+	'|':  {[]string{"|", ">", "="}, []TokenType{OR_LOGIC, PIPELINE_RIGHT, OR_ASSIGN, OR_BITWISE}},
+	'^':  {[]string{"="}, []TokenType{XOR_ASSIGN, XOR_BITWISE}},
+	'~':  {[]string{"&=", "&", "|=", "|", "^=", "^"}, []TokenType{NAND_ASSIGN, NAND_BITWISE, NOR_ASSIGN, NOR_BITWISE, XNOR_ASSIGN, XNOR_BITWISE, NOT_BITWISE}},
+	'<':  {[]string{"|", "!>", "!", "<=", "<<=", "<<", "<"}, []TokenType{PIPELINE_LEFT, GO_BI, GO_IN, BITSHIFT_LEFT_ASSIGN, ROUNDSHIFT_LEFT_ASSIGN, ROUNDSHIFT_LEFT, SHIFT_LEFT, LESS}},
+	'>':  {[]string{">=", ">>=", ">>", ">"}, []TokenType{BITSHIFT_RIGHT_ASSIGN, ROUNDSHIFT_RIGHT_ASSIGN, ROUNDSHIFT_RIGHT, SHIFT_RIGHT, GREATER}},
+	'!':  {[]string{".", ">", "="}, []TokenType{BANG_NAV, GO_OUT, NOT_ASSIGN, BANG}},
+	'?':  {[]string{".", ":"}, []TokenType{CHECK_NAV, ELVIS, CHECK}},
+	'=':  {[]string{">", "="}, []TokenType{RETURN, EQUAL, ASSIGN}},
 }
