@@ -7,7 +7,8 @@ import (
 	"os"
 
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
+	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
+	p "github.com/ToniLommez/Neon_Dream_Runner/pkg/parser"
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
 
@@ -57,19 +58,17 @@ func runPrompt() (err error) {
 	}
 }
 
-func run(input string) error {
-	s := lexer.NewScanner(input)
-	ts, err := s.ScanTokens()
-	if err != nil {
+func run(input string) (err error) {
+	var ts []l.Token
+	s := l.NewScanner(input)
+	if ts, err = s.ScanTokens(); err != nil {
 		return err
 	}
-	for _, t := range ts {
-		fmt.Printf("%s ", t)
-		if t.Type == lexer.NEW_LINE {
-			fmt.Println()
-		}
-	}
-	fmt.Printf("\n")
+
+	parser := p.NewParser(ts)
+	expr := parser.Parse()
+	fmt.Println(expr)
+
 	return nil
 }
 

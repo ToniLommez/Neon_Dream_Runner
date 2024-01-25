@@ -6,6 +6,7 @@ var keywords = map[string]TokenType{
 	"let?":    LET_CHECK,
 	"let!?":   LET_BANG_CHECK,
 	"fn":      FN,
+	"fn!":     FN_BANG,
 	"asm":     ASM,
 	"for":     FOR,
 	"loop":    LOOP,

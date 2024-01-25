@@ -17,7 +17,7 @@ const (
 	TAG         TokenType = "TAG"         // #
 
 	// Operators
-	MINNUS           TokenType = "MINNUS"           // -
+	MINUS            TokenType = "MINUS"            // -
 	PLUS             TokenType = "PLUS"             // +
 	SLASH            TokenType = "SLASH"            // /
 	STAR             TokenType = "STAR"             // *
@@ -30,6 +30,9 @@ const (
 	NOR_BITWISE      TokenType = "NOR_BITWISE"      // ~|
 	XNOR_BITWISE     TokenType = "XNOR_BITWISE"     // ~^
 	EQUAL            TokenType = "EQUAL"            // ==
+	NOT_EQUAL        TokenType = "NOT_EQUAL"        // !=
+	GREATER_EQUAL    TokenType = "GREATER_EQUAL"    // >=
+	LESS_EQUAL       TokenType = "LESS_EQUAL"       // <=
 	AND_LOGIC        TokenType = "AND_LOGIC"        // &&
 	OR_LOGIC         TokenType = "OR_LOGIC"         // ||
 	NOT_BITWISE      TokenType = "NOT_BITWISE"      // ~
@@ -69,13 +72,13 @@ const (
 	BITSHIFT_RIGHT_ASSIGN   TokenType = "BITSHIFT_RIGHT_ASSIGN"   // >>=
 	ROUNDSHIFT_LEFT_ASSIGN  TokenType = "ROUNDSHIFT_LEFT_ASSIGN"  // <<<=
 	ROUNDSHIFT_RIGHT_ASSIGN TokenType = "ROUNDSHIFT_RIGHT_ASSIGN" // >>>=
-	NOT_ASSIGN              TokenType = "NOT_ASSIGN"              // !=
 	AND_ASSIGN              TokenType = "AND_ASSIGN"              // &=
 	NAND_ASSIGN             TokenType = "NAND_ASSIGN"             // ~&=
 	OR_ASSIGN               TokenType = "OR_ASSIGN"               // |=
 	NOR_ASSIGN              TokenType = "NOR_ASSIGN"              // ~|=
 	XOR_ASSIGN              TokenType = "XOR_ASSIGN"              // ^=
 	XNOR_ASSIGN             TokenType = "XNOR_ASSIGN"             // ~^=
+	NOT_ASSIGN              TokenType = "NOT_ASSIGN"              // ~=
 
 	// Literals
 	IDENTIFIER     TokenType = "IDENTIFIER"     // function_name
@@ -88,6 +91,7 @@ const (
 	LET_CHECK      TokenType = "LET?"    // let
 	LET_BANG_CHECK TokenType = "LET!?"   // let
 	FN             TokenType = "FN"      // fn
+	FN_BANG        TokenType = "FN!"     // fn!
 	ASM            TokenType = "ASM"     // asm
 	FOR            TokenType = "FOR"     // for
 	LOOP           TokenType = "LOOP"    // loop
