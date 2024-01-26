@@ -5,10 +5,10 @@ Neon Dream Runner is the interpreter for the Neon programming language written i
 
 ### Utilities
 
-1. Interactive command prompt for interaction with the language:
+1. Interactive command prompt for interaction with the language:  
 ```go run main.go```
 
-2. Script execution
+2. Script execution:  
 ```go run main.go file.ne```
 
 ## About Neon
@@ -20,14 +20,14 @@ For more information, please visit our official reference repository: [Official 
 
 ## Package Layout
 
-1. pkg
+1. ***pkg***  
 Core library used for building the interpreter, divided into packages that abstract each phase of the process.
 
-2. doc
+2. ***doc***  
 Documentation of the language used for building the interpreter.
 
-3. cmd
+3. ***cmd***  
 Other drivers used in the project complementary to the core library.
 
-4. main.go
+4. ***main.go***  
 The main file used to run the interpreter.
