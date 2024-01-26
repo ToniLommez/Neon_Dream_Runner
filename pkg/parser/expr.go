@@ -9,6 +9,12 @@ type Expr interface {
 	String() string
 }
 
+type Ternary struct {
+	Expression Expr
+	True       Expr
+	False      Expr
+}
+
 type Binary struct {
 	Left     Expr
 	Operator l.Token

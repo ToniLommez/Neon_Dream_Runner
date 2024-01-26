@@ -1,0 +1,158 @@
+Operators Precedence (i.e. Expressions)
+
+expression
+sequence    ;
+assign      = += -= *= /= %= **= <<= >>= <<<= >>>= &= |= ^= ~= ~&= ~|= ~^=
+pipeline    <| |> 
+cast        :
+ternary     "?:"
+range       .. 
+logic       && ||
+equality    != ==
+comparision >= <= > <
+bitshift    << >> <<< >>>
+bitwise     & | ^ ~& ~| ~^ 
+term        + -
+factor      * / %
+power       **
+increment   ++ --
+pointer     * &
+unary       ! ~ + - <!
+access      ?. !. . []
+check       ?: ?
+primary     IDENTIFIER | STRING_LITERAL | NUMBER_LITERAL | FLOAT_LITERAL | TRUE | FALSE | NIL 
+declaration ARRAY_DECLARATION | SLICE_DECLARATION | TUPLE_DECLARATION | MAP_DECLARATION
+block       {}
+group       ()
+
+// Lox Reference
+expression     → equality ;
+equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           → factor ( ( "-" | "+" ) factor )* ;
+factor         → unary ( ( "/" | "*" ) unary )* ;
+unary          → ( "!" | "-" ) unary | primary ;
+primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+
+// Proposed Precedence
+
+// Sequence
+SEMICOLON       // ;
+
+// Assign
+ASSIGN                  // =
+ADD_ASSIGN              // +=
+SUB_ASSIGN              // -=
+MUL_ASSIGN              // *=
+DIV_ASSIGN              // /=
+MOD_ASSIGN              // %=
+POW_ASSIGN              // **=
+BITSHIFT_LEFT_ASSIGN    // <<=
+BITSHIFT_RIGHT_ASSIGN   // >>=
+ROUNDSHIFT_LEFT_ASSIGN  // <<<=
+ROUNDSHIFT_RIGHT_ASSIGN // >>>=
+AND_ASSIGN              // &=
+OR_ASSIGN               // |=
+XOR_ASSIGN              // ^=
+NOT_ASSIGN              // ~=
+NAND_ASSIGN             // ~&=
+NOR_ASSIGN              // ~|=
+XNOR_ASSIGN             // ~^=
+
+// Pipeline
+PIPELINE_LEFT   // <|
+PIPELINE_RIGHT  // |>
+
+// Cast
+COLON           // :
+
+// Ternary
+
+// Range
+RANGE_DOT       // ..
+
+// Logic
+OR_LOGIC        // ||
+AND_LOGIC       // &&
+
+// Equality
+EQUAL           // ==
+NOT_EQUAL       // !=
+
+// Comparison
+GREATER_EQUAL   // >=
+LESS_EQUAL      // <=
+GREATER         // >
+LESS            // <
+
+// Bitshift
+SHIFT_LEFT      // <<
+ROUNDSHIFT_LEFT // <<<
+SHIFT_RIGHT     // >>
+ROUNDSHIFT_RIGHT// >>>
+
+// Bitwise
+AND_BITWISE     // &
+OR_BITWISE      // |
+XOR_BITWISE     // ^
+NAND_BITWISE    // ~&
+NOR_BITWISE     // ~|
+XNOR_BITWISE    // ~^
+
+// Term
+MINUS           // -
+PLUS            // +
+
+// Factor
+STAR            // *
+SLASH           // /
+MOD             // %
+
+// Power
+POW             // **
+
+// Pointer
+STAR            // *
+AND_BITWISE     // &
+
+// Increment
+INCREMENT       // ++
+DECREMENT       // --
+
+// Unary
+BANG            // !
+NOT_BITWISE     // ~
+PLUS            // +
+MINUS           // -
+GO_IN           // <!
+
+// Access
+CHECK_NAV       // ?.
+BANG_NAV        // !.
+DOT             // .
+LEFT_BRACKET    // [
+RIGHT_BRACKET   // ]
+
+// Check
+ELVIS           // ?:
+CHECK           // ?
+
+// Primary
+IDENTIFIER      // abc
+STRING_LITERAL  // "abc"
+NUMBER_LITERAL  // 12
+FLOAT_LITERAL   // 12.3
+
+// Declaration
+ARRAY_DECLARATION   // [x][1, 2]
+SLICE_DECLARATION   // [1, 2, 3]
+TUPLE_DECLARATION   // (1, 2.0, "3")
+MAP_DECLARATION     // |(int, int): float|{...}
+
+// Block
+LEFT_BRACE      // {
+RIGHT_BRACE     // }
+
+// Group
+LEFT_PAREN      // (
+RIGHT_PAREN     // )

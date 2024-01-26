@@ -252,4 +252,6 @@ var complexTokens = map[byte]struct {
 	'!':  {[]string{".", ">", "="}, []TokenType{BANG_NAV, GO_OUT, NOT_EQUAL, BANG}},
 	'?':  {[]string{".", ":"}, []TokenType{CHECK_NAV, ELVIS, CHECK}},
 	'=':  {[]string{">", "="}, []TokenType{RETURN, EQUAL, ASSIGN}},
+	'[':  {[]string{}, []TokenType{LEFT_BRACKET}},
+	']':  {[]string{}, []TokenType{RIGHT_BRACKET}},
 }

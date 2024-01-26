@@ -6,22 +6,23 @@ const (
 	NEW_LINE TokenType = "NEW_LINE"
 
 	// Context
-	LEFT_PAREN  TokenType = "LEFT_PAREN"  // (
-	RIGHT_PAREN TokenType = "RIGHT_PAREN" // )
-	LEFT_BRACE  TokenType = "LEFT_BRACE"  // {
-	RIGHT_BRACE TokenType = "RIGHT_BRACE" // }
-	PIPE        TokenType = "PIPE"        // |
-	DOT         TokenType = "DOT"         // .
-	COMMA       TokenType = "COMMA"       // ,
-	AT          TokenType = "AT"          // @
-	TAG         TokenType = "TAG"         // #
+	LEFT_PAREN    TokenType = "LEFT_PAREN"    // (
+	RIGHT_PAREN   TokenType = "RIGHT_PAREN"   // )
+	LEFT_BRACKET  TokenType = "LEFT_BRACKET"  // [
+	RIGHT_BRACKET TokenType = "RIGHT_BRACKET" // ]
+	LEFT_BRACE    TokenType = "LEFT_BRACE"    // {
+	RIGHT_BRACE   TokenType = "RIGHT_BRACE"   // }
+	DOT           TokenType = "DOT"           // .
+	COMMA         TokenType = "COMMA"         // ,
+	AT            TokenType = "AT"            // @
+	TAG           TokenType = "TAG"           // #
 
 	// Operators
 	MINUS            TokenType = "MINUS"            // -
 	PLUS             TokenType = "PLUS"             // +
 	SLASH            TokenType = "SLASH"            // /
 	STAR             TokenType = "STAR"             // *
-	POW              TokenType = "POW"              // *
+	POW              TokenType = "POW"              // **
 	MOD              TokenType = "MOD"              // %
 	AND_BITWISE      TokenType = "AND_BITWISE"      // &
 	OR_BITWISE       TokenType = "OR_BITWISE"       // |
