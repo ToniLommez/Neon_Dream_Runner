@@ -5,6 +5,7 @@ fn main {
 
     // array
     let! b2: [int: 3] = [1, 2, 3] 
+    let! b2: = [int: 3][1, 2, 3] 
 
     // tupla 
     let! c = (1, 2.0, "3") // imutavel

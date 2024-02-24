@@ -61,3 +61,7 @@ var keywords = map[string]TokenType{
 	"byte":    BYTE,
 	"any":     ANY,
 }
+
+func (t TokenType) IsType() bool {
+	return t == INT || t == INT8 || t == INT16 || t == INT32 || t == INT64 || t == UINT || t == UINT8 || t == UINT16 || t == UINT32 || t == UINT64 || t == FLOAT || t == FLOAT32 || t == FLOAT64 || t == BOOL || t == CHAR || t == STRING || t == BYTE || t == ANY
+}

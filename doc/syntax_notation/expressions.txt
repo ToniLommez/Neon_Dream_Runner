@@ -4,9 +4,8 @@ expression
 sequence    ;
 assign      = += -= *= /= %= **= <<= >>= <<<= >>>= &= |= ^= ~= ~&= ~|= ~^=
 pipeline    <| |> 
-cast        :
 ternary     "?:"
-range       .. 
+interval    .. 
 logic       && ||
 equality    != ==
 comparision >= <= > <
@@ -19,11 +18,23 @@ increment   ++ --
 pointer     * &
 unary       ! ~ + - <!
 access      ?. !. . []
-check       ?: ?
-primary     IDENTIFIER | STRING_LITERAL | NUMBER_LITERAL | FLOAT_LITERAL | TRUE | FALSE | NIL 
+validate    ?:
+catch       ?
+cast        :
+primary     IDENTIFIER | STRING_LITERAL | NUMBER_LITERAL | FLOAT_LITERAL | TRUE | FALSE | NIL | TYPE
 declaration ARRAY_DECLARATION | SLICE_DECLARATION | TUPLE_DECLARATION | MAP_DECLARATION
-block       {}
 group       ()
+block       {}
+
+// Direcao de associatividade
+Reiniciar pilha => direita  < esquerda
+Continuar       => esquerda > direita
+
+// Declaration
+ARRAY_DECLARATION   // [int][1, 2]
+SLICE_DECLARATION   // [1, 2, 3]
+TUPLE_DECLARATION   // (1, 2.0, "3")
+MAP_DECLARATION     // |(int, int): float|{...}
 
 // Lox Reference
 expression     → equality ;
@@ -63,12 +74,9 @@ XNOR_ASSIGN             // ~^=
 PIPELINE_LEFT   // <|
 PIPELINE_RIGHT  // |>
 
-// Cast
-COLON           // :
-
 // Ternary
 
-// Range
+// Interval
 RANGE_DOT       // ..
 
 // Logic
@@ -111,13 +119,13 @@ MOD             // %
 // Power
 POW             // **
 
-// Pointer
-STAR            // *
-AND_BITWISE     // &
-
 // Increment
 INCREMENT       // ++
 DECREMENT       // --
+
+// Pointer
+STAR            // *
+AND_BITWISE     // &
 
 // Unary
 BANG            // !
@@ -133,9 +141,14 @@ DOT             // .
 LEFT_BRACKET    // [
 RIGHT_BRACKET   // ]
 
-// Check
+// Validate
 ELVIS           // ?:
+
+// Catch
 CHECK           // ?
+
+// Cast
+COLON           // :
 
 // Primary
 IDENTIFIER      // abc
@@ -144,15 +157,16 @@ NUMBER_LITERAL  // 12
 FLOAT_LITERAL   // 12.3
 
 // Declaration
-ARRAY_DECLARATION   // [x][1, 2]
+ARRAY_DECLARATION   // [int: 2][1, 2]
 SLICE_DECLARATION   // [1, 2, 3]
 TUPLE_DECLARATION   // (1, 2.0, "3")
 MAP_DECLARATION     // |(int, int): float|{...}
+
+// Group
+LEFT_PAREN      // (
+RIGHT_PAREN     // )
 
 // Block
 LEFT_BRACE      // {
 RIGHT_BRACE     // }
 
-// Group
-LEFT_PAREN      // (
-RIGHT_PAREN     // )

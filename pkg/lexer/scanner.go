@@ -241,7 +241,7 @@ var complexTokens = map[byte]struct {
 	'.':  {[]string{"."}, []TokenType{RANGE_DOT, DOT}},
 	'+':  {[]string{"+", "="}, []TokenType{INCREMENT, ADD_ASSIGN, PLUS}},
 	'-':  {[]string{"-", "="}, []TokenType{DECREMENT, SUB_ASSIGN, MINUS}},
-	'*':  {[]string{"**=", "**", "*="}, []TokenType{POW_ASSIGN, POW, MUL_ASSIGN, STAR}},
+	'*':  {[]string{"*=", "*", "="}, []TokenType{POW_ASSIGN, POW, MUL_ASSIGN, STAR}},
 	'%':  {[]string{"="}, []TokenType{MOD_ASSIGN, MOD}},
 	'&':  {[]string{"&", "="}, []TokenType{AND_LOGIC, AND_ASSIGN, AND_BITWISE}},
 	'|':  {[]string{"|", ">", "="}, []TokenType{OR_LOGIC, PIPELINE_RIGHT, OR_ASSIGN, OR_BITWISE}},
