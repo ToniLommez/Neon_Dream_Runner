@@ -160,7 +160,7 @@ func (p *Parser) equality() (Expr, error) {
 	for p.match(l.NOT_EQUAL, l.EQUAL) {
 		operator := p.previous()
 		right, err := p.comparison()
-		expr = Binary{expr, operator, right}
+		expr = Equality{expr, operator, right}
 		if err != nil {
 			return expr, err
 		}
@@ -178,7 +178,7 @@ func (p *Parser) comparison() (Expr, error) {
 	for p.match(l.GREATER, l.GREATER_EQUAL, l.LESS, l.LESS_EQUAL) {
 		operator := p.previous()
 		right, err := p.bitshift()
-		expr = Binary{expr, operator, right}
+		expr = Comparison{expr, operator, right}
 		if err != nil {
 			return expr, err
 		}
@@ -234,7 +234,7 @@ func (p *Parser) term() (Expr, error) {
 	for p.match(l.PLUS, l.MINUS) {
 		operator := p.previous()
 		right, err := p.factor()
-		expr = Binary{expr, operator, right}
+		expr = Term{expr, operator, right}
 		if err != nil {
 			return expr, err
 		}
@@ -252,7 +252,7 @@ func (p *Parser) factor() (Expr, error) {
 	for p.match(l.STAR, l.SLASH, l.MOD) {
 		operator := p.previous()
 		right, err := p.power()
-		expr = Binary{expr, operator, right}
+		expr = Factor{expr, operator, right}
 		if err != nil {
 			return expr, err
 		}
@@ -280,7 +280,7 @@ func (p *Parser) power() (Expr, error) {
 }
 
 func (p *Parser) increment() (Expr, error) {
-	if p.match(l.INCREMENT) {
+	if p.match(l.INCREMENT, l.DECREMENT) {
 		operator := p.previous()
 		right, err := p.expression()
 		return Increment{Expression: right, Operator: operator, Position: false}, err
@@ -291,7 +291,7 @@ func (p *Parser) increment() (Expr, error) {
 		return expr, err
 	}
 
-	if p.match(l.INCREMENT) {
+	if p.match(l.INCREMENT, l.DECREMENT) {
 		operator := p.previous()
 		expr = Increment{Expression: expr, Operator: operator, Position: true}
 	}
@@ -416,10 +416,12 @@ func (p *Parser) cast() (Expr, error) {
 			return expr, err
 		}
 
-		if right.Type() == "Type" {
-			expr = Cast{Left: expr, TypeCast: l.TokenType(right.String())}
-		} else {
-			return expr, errutils.Error(p.tokens[p.current].Line, p.tokens[p.current].Column, "expect type to cast")
+		switch t := right.(type) {
+		case Type:
+			expr = Cast{Left: expr, TypeCast: t.Name}
+		default:
+			token := p.tokens[p.current]
+			return expr, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, "expect type to cast")
 		}
 	}
 
@@ -443,7 +445,7 @@ func (p *Parser) primary() (Expr, error) {
 		return Literal{nil}, nil
 	}
 	if p.match(l.INT, l.INT8, l.INT16, l.INT32, l.INT64, l.UINT, l.UINT8, l.UINT16, l.UINT32, l.UINT64, l.FLOAT, l.FLOAT32, l.FLOAT64, l.BOOL, l.CHAR, l.STRING, l.BYTE, l.ANY) {
-		return Type{Name: string(p.previous().Type)}, nil
+		return Type{Name: p.previous()}, nil
 	}
 
 	return p.declaration()
@@ -539,5 +541,5 @@ func (p *Parser) block() (Expr, error) {
 
 func (p *Parser) deadEnd() (Expr, error) {
 	token := p.tokens[p.current]
-	return nil, errutils.Error(token.Line, token.Column, "expect expression.")
+	return nil, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect expression, found: %v", token))
 }

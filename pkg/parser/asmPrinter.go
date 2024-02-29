@@ -2,7 +2,32 @@ package parser
 
 import "fmt"
 
-func (x Binary) String() string {
+func parenthesize(name string, exprs ...Expr) string {
+	parts := ""
+	parts += "(" + name
+	for _, e := range exprs {
+		parts += " " + e.String()
+	}
+	parts += ")"
+
+	return parts
+}
+
+// String()
+
+func (x Equality) String() string {
+	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
+}
+
+func (x Comparison) String() string {
+	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
+}
+
+func (x Term) String() string {
+	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
+}
+
+func (x Factor) String() string {
 	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
 }
 
@@ -14,16 +39,12 @@ func (x Grouping) String() string {
 	return parenthesize("group ", x.Expression)
 }
 
-func (x Literal) String() string {
-	return fmt.Sprintf("%v", x.Value)
-}
-
 func (x Sequence) String() string {
 	return fmt.Sprintf("%v ; %v", x.Left, x.Right)
 }
 
 func (x Identifier) String() string {
-	return fmt.Sprintf("%v", x.Name.Lexeme)
+	return fmt.Sprintf("%v", x.Name)
 }
 
 func (x Assign) String() string {
@@ -36,10 +57,6 @@ func (x Pipeline) String() string {
 
 func (x Cast) String() string {
 	return fmt.Sprintf("(%v:%s)", x.Left, x.TypeCast)
-}
-
-func (x Type) String() string {
-	return x.Name
 }
 
 func (x Ternary) String() string {
@@ -103,110 +120,13 @@ func (x Check) String() string {
 }
 
 func (x ArrayLiteral) String() string {
-	return fmt.Sprintf("([%s: %v]%v)", x.Typing.Type, x.Size, x.Values)
+	return fmt.Sprintf("([%s: %v]%v)", x.Typing.Lexeme, x.Size, x.Values)
 }
 
-func parenthesize(name string, exprs ...Expr) string {
-	parts := ""
-	parts += "(" + name
-	for _, e := range exprs {
-		parts += " " + e.String()
-	}
-	parts += ")"
-
-	return parts
+func (x Literal) String() string {
+	return fmt.Sprintf("%v", x.Value)
 }
 
-// Type
-
-func (x Binary) Type() string {
-	return "Binary"
-}
-
-func (x Unary) Type() string {
-	return "Unary"
-}
-
-func (x Grouping) Type() string {
-	return "Grouping"
-}
-
-func (x Literal) Type() string {
-	return "Literal"
-}
-
-func (x Sequence) Type() string {
-	return "Sequence"
-}
-
-func (x Identifier) Type() string {
-	return "Identifier"
-}
-
-func (x Assign) Type() string {
-	return "Assign"
-}
-
-func (x Pipeline) Type() string {
-	return "Pipeline"
-}
-
-func (x Cast) Type() string {
-	return "Cast"
-}
-
-func (x Type) Type() string {
-	return "Type"
-}
-
-func (x Ternary) Type() string {
-	return "Ternary"
-}
-
-func (x Range) Type() string {
-	return "Range"
-}
-
-func (x Logic) Type() string {
-	return "Logic"
-}
-
-func (x Bitshift) Type() string {
-	return "Bitshift"
-}
-
-func (x Bitwise) Type() string {
-	return "Bitwise"
-}
-
-func (x Power) Type() string {
-	return "Power"
-}
-
-func (x Increment) Type() string {
-	return "Increment"
-}
-
-func (x Pointer) Type() string {
-	return "Pointer"
-}
-
-func (x Access) Type() string {
-	return "Access"
-}
-
-func (x PositionAccess) Type() string {
-	return "PositionAccess"
-}
-
-func (x Elvis) Type() string {
-	return "Elvis"
-}
-
-func (x Check) Type() string {
-	return "Check"
-}
-
-func (x ArrayLiteral) Type() string {
-	return "ArrayLiteral"
+func (x Type) String() string {
+	return fmt.Sprintf("(%v)", x.Name.Lexeme)
 }

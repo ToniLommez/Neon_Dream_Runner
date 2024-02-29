@@ -5,10 +5,10 @@ sequence    ;
 assign      = += -= *= /= %= **= <<= >>= <<<= >>>= &= |= ^= ~= ~&= ~|= ~^=
 pipeline    <| |> 
 ternary     "?:"
-interval    .. 
+range       .. 
 logic       && ||
 equality    != ==
-comparision >= <= > <
+comparison >= <= > <
 bitshift    << >> <<< >>>
 bitwise     & | ^ ~& ~| ~^ 
 term        + -
@@ -76,7 +76,7 @@ PIPELINE_RIGHT  // |>
 
 // Ternary
 
-// Interval
+// Range
 RANGE_DOT       // ..
 
 // Logic

@@ -18,3 +18,11 @@ func ClearScreen() {
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 }
+
+func Ternary(b bool, x1 interface{}, x2 interface{}) interface{} {
+	if b {
+		return x1
+	} else {
+		return x2
+	}
+}

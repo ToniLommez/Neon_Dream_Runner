@@ -33,24 +33,22 @@ func runPrompt() (err error) {
 	for {
 		fmt.Print("> ")
 		if s.Scan() {
-			input := s.Text()
+			prompt = s.Text()
 
-			switch input {
+			switch prompt {
 			case "exit":
 				return nil
 			case "clear":
 				utils.ClearScreen()
 			case "":
+			default:
 				err = run(prompt)
-				prompt = ""
 				if err != nil {
 					fatal := errutils.Deal(err)
 					if fatal != nil {
 						return fatal
 					}
 				}
-			default:
-				prompt += input + "\n"
 			}
 		} else {
 			return s.Err() // Retorna um erro se a leitura falhar
@@ -67,7 +65,12 @@ func run(input string) (err error) {
 
 	parser := p.NewParser(ts)
 	expr := parser.Parse()
-	fmt.Println(expr)
+	result, err := p.Evaluate(expr)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(result)
+	}
 
 	return nil
 }

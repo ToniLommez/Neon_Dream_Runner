@@ -5,38 +5,7 @@ import (
 )
 
 type Expr interface {
-	// interpret()
 	String() string
-	Type() string
-}
-
-type Ternary struct {
-	Expression Expr
-	True       Expr
-	False      Expr
-}
-
-type Binary struct {
-	Left     Expr
-	Operator l.Token
-	Right    Expr
-}
-
-type Unary struct {
-	Operator l.Token
-	Right    Expr
-}
-
-type Grouping struct {
-	Expression Expr
-}
-
-type Literal struct {
-	Value interface{}
-}
-
-type Type struct {
-	Name string
 }
 
 type Sequence struct {
@@ -50,19 +19,16 @@ type Assign struct {
 	Right    Expr
 }
 
-type Identifier struct {
-	Name l.Token
-}
-
 type Pipeline struct {
 	Left     Expr
 	Operator l.Token
 	Right    Expr
 }
 
-type Cast struct {
-	Left     Expr
-	TypeCast l.TokenType
+type Ternary struct {
+	Expression Expr
+	True       Expr
+	False      Expr
 }
 
 type Range struct {
@@ -71,6 +37,18 @@ type Range struct {
 }
 
 type Logic struct {
+	Left     Expr
+	Operator l.Token
+	Right    Expr
+}
+
+type Equality struct {
+	Left     Expr
+	Operator l.Token
+	Right    Expr
+}
+
+type Comparison struct {
 	Left     Expr
 	Operator l.Token
 	Right    Expr
@@ -88,14 +66,24 @@ type Bitwise struct {
 	Right    Expr
 }
 
+type Term struct {
+	Left     Expr
+	Operator l.Token
+	Right    Expr
+}
+
+type Factor struct {
+	Left     Expr
+	Operator l.Token
+	Right    Expr
+}
+
 type Power struct {
 	Left  Expr
 	Right Expr
 }
 
-// Position = 0 is Left
-//
-// Position = 1 is Right
+// Position = 0 is Left, 1 is Right
 type Increment struct {
 	Expression Expr
 	Operator   l.Token
@@ -103,6 +91,11 @@ type Increment struct {
 }
 
 type Pointer struct {
+	Operator l.Token
+	Right    Expr
+}
+
+type Unary struct {
 	Operator l.Token
 	Right    Expr
 }
@@ -130,8 +123,29 @@ type Check struct {
 	Right      Expr
 }
 
+type Cast struct {
+	Left     Expr
+	TypeCast l.Token
+}
+
+type Identifier struct {
+	Name l.Token
+}
+
 type ArrayLiteral struct {
 	Typing l.Token
 	Size   Expr
 	Values []Expr
+}
+
+type Literal struct {
+	Value interface{}
+}
+
+type Type struct {
+	Name l.Token
+}
+
+type Grouping struct {
+	Expression Expr
 }

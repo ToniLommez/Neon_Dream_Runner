@@ -40,7 +40,8 @@ func (p *Parser) check(t l.TokenType) bool {
 	if p.isAtEnd() {
 		return false
 	}
-	return p.peek().Type == t
+	x := p.peek()
+	return x.Type == t
 }
 
 func (p *Parser) advance() l.Token {
@@ -75,7 +76,7 @@ func (p *Parser) consume(expected l.TokenType) (l.Token, error) {
 		return p.advance(), nil
 	}
 	token := p.previous()
-	return token, errutils.Error(token.Line, token.Column, fmt.Sprintf("expect %s after expression.", expected))
+	return token, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect %s after expression.", expected))
 }
 
 func (p *Parser) Synchronize() {

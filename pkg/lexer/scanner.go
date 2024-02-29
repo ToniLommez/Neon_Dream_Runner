@@ -52,6 +52,9 @@ func (s *Scanner) advance() byte {
 
 func (s *Scanner) addToken(tokenType TokenType, literal interface{}) {
 	text := s.source[s.start:s.current]
+	if tokenType == STRING_LITERAL {
+		s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: "\"" + text + "\"", Literal: literal, Line: s.line, Column: s.column})
+	}
 	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line, Column: s.column})
 }
 
@@ -119,9 +122,9 @@ func (s *Scanner) switchToken(tokens []string, tokenTypes []TokenType) {
 }
 
 func (s *Scanner) string() error {
-	for s.peek() != '"' && !s.isAtEnd() {
-		if s.peek() == '\n' {
-			return errutils.Error(s.line, s.column, "unterminated string.")
+	for s.peek() != '"' {
+		if s.isAtEnd() {
+			return errutils.Error(s.line, s.column, string(s.peek()), errutils.LEXER, "unterminated string.")
 		}
 		s.advance()
 	}
@@ -217,7 +220,7 @@ func (s *Scanner) scanToken() (err error) {
 		} else if isAlpha(c) {
 			s.identifier()
 		} else {
-			err = errutils.Error(s.line, s.column, fmt.Sprintf("unexpected '%c'.", c))
+			err = errutils.Error(s.line, s.column, string(c), errutils.LEXER, fmt.Sprintf("unexpected '%c'.", c))
 		}
 	}
 
