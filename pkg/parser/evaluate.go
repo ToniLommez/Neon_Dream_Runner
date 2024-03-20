@@ -11,7 +11,7 @@ import (
 func Evaluate(expr Expr) (any, error) {
 	switch v := expr.(type) {
 	case Sequence:
-		return nil, nil
+		return SequenceEval(v)
 	case Assign:
 		return nil, nil
 	case Pipeline:
@@ -21,11 +21,11 @@ func Evaluate(expr Expr) (any, error) {
 	case Range:
 		return nil, nil
 	case Logic:
-		return nil, nil
+		return LogicEval(v)
 	case Equality:
-		return nil, nil
+		return EqualityEval(v)
 	case Comparison:
-		return nil, nil
+		return ComparisonEval(v)
 	case Bitshift:
 		return nil, nil
 	case Bitwise:
@@ -76,11 +76,11 @@ func Truthy(value any) (r bool, err error) {
 		r = false
 	case bool:
 		r = v
-	case int, int8, int16, int32, int64:
+	case int:
 		r = v != 0
-	case uint, uint8, uint16, uint32, uint64:
+	case uint:
 		r = v != 0
-	case float32, float64:
+	case float64:
 		r = v != 0.0
 	case string:
 		r = v != ""
@@ -90,6 +90,14 @@ func Truthy(value any) (r bool, err error) {
 	}
 
 	return
+}
+
+func SequenceEval(s Sequence) (any, error) {
+	if _, err := Evaluate(s.Left); err != nil {
+		return nil, err
+	}
+
+	return Evaluate(s.Right)
 }
 
 func TernaryEval(t Ternary) (any, error) {
@@ -108,6 +116,176 @@ func TernaryEval(t Ternary) (any, error) {
 	} else {
 		return Evaluate(t.False)
 	}
+}
+
+func LogicEval(x Logic) (res interface{}, err error) {
+	l, err := Evaluate(x.Left)
+	if err != nil {
+		return
+	}
+
+	r, err := Evaluate(x.Right)
+	if err != nil {
+		return
+	}
+
+	l, r, precedence := typePrecedence(l, r)
+	if precedence == UNKNOWN {
+		err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+	}
+
+	switch x.Operator.Type {
+	case lexer.OR_LOGIC:
+		switch precedence {
+		case BOOL:
+			res = l.(bool) || r.(bool)
+		case UINT:
+			res = (l.(uint) > 0) || (r.(uint) > 0)
+		case INT:
+			res = (l.(int) > 0) || (r.(int) > 0)
+		case FLOAT:
+			res = (l.(float64) > 0) || (r.(float64) > 0)
+		case STRING:
+			err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "cannot use string as logic value")
+		}
+	case lexer.AND_LOGIC:
+		switch precedence {
+		case BOOL:
+			res = l.(bool) && r.(bool)
+		case UINT:
+			res = (l.(uint) > 0) && (r.(uint) > 0)
+		case INT:
+			res = (l.(int) > 0) && (r.(int) > 0)
+		case FLOAT:
+			res = (l.(float64) > 0) && (r.(float64) > 0)
+		case STRING:
+			err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "cannot use string as logic value")
+		}
+	}
+
+	return
+}
+
+func EqualityEval(e Equality) (res interface{}, err error) {
+	l, err := Evaluate(e.Left)
+	if err != nil {
+		return
+	}
+
+	r, err := Evaluate(e.Right)
+	if err != nil {
+		return
+	}
+
+	l, r, precedence := typePrecedence(l, r)
+	if precedence == UNKNOWN {
+		err = errutils.Error(e.Operator.Line, e.Operator.Column, e.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+	}
+
+	switch e.Operator.Type {
+	case lexer.EQUAL:
+		switch precedence {
+		case BOOL:
+			res = l.(bool) == r.(bool)
+		case UINT:
+			res = l.(uint) == r.(uint)
+		case INT:
+			res = l.(int) == r.(int)
+		case FLOAT:
+			res = l.(float64) == r.(float64)
+		case STRING:
+			res = l.(string) == r.(string)
+		}
+	case lexer.NOT_EQUAL:
+		switch precedence {
+		case BOOL:
+			res = l.(bool) != r.(bool)
+		case UINT:
+			res = l.(uint) != r.(uint)
+		case INT:
+			res = l.(int) != r.(int)
+		case FLOAT:
+			res = l.(float64) != r.(float64)
+		case STRING:
+			res = l.(string) != r.(string)
+		}
+	}
+
+	return
+}
+
+func ComparisonEval(c Comparison) (res interface{}, err error) {
+	l, err := Evaluate(c.Left)
+	if err != nil {
+		return
+	}
+
+	r, err := Evaluate(c.Right)
+	if err != nil {
+		return
+	}
+
+	l, r, precedence := typePrecedence(l, r)
+	if precedence == UNKNOWN {
+		err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+	}
+
+	switch c.Operator.Type {
+	case lexer.GREATER_EQUAL:
+		switch precedence {
+		case BOOL:
+			res = boolToInt(l.(bool)) >= boolToInt(r.(bool))
+		case UINT:
+			res = l.(uint) >= r.(uint)
+		case INT:
+			res = l.(int) >= r.(int)
+		case FLOAT:
+			res = l.(float64) >= r.(float64)
+		case STRING:
+			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+		}
+	case lexer.LESS_EQUAL:
+		switch precedence {
+		case BOOL:
+			res = boolToInt(l.(bool)) <= boolToInt(r.(bool))
+		case UINT:
+			res = l.(uint) <= r.(uint)
+		case INT:
+			res = l.(int) <= r.(int)
+		case FLOAT:
+			res = l.(float64) <= r.(float64)
+		case STRING:
+			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+		}
+	case lexer.GREATER:
+		switch precedence {
+		case BOOL:
+			res = boolToInt(l.(bool)) > boolToInt(r.(bool))
+		case UINT:
+			res = l.(uint) > r.(uint)
+		case INT:
+			res = l.(int) > r.(int)
+		case FLOAT:
+			res = l.(float64) > r.(float64)
+		case STRING:
+			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+		}
+	case lexer.LESS:
+		switch precedence {
+		case BOOL:
+			res = boolToInt(l.(bool)) < boolToInt(r.(bool))
+		case UINT:
+			res = l.(uint) < r.(uint)
+		case INT:
+			res = l.(int) < r.(int)
+		case FLOAT:
+			res = l.(float64) < r.(float64)
+		case STRING:
+			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+		}
+	}
+
+	return
 }
 
 func UnaryEval(u Unary) (res any, err error) {
@@ -159,38 +337,58 @@ func UnaryEval(u Unary) (res any, err error) {
 		}
 	case lexer.GO_IN:
 		err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "parallelism not yet implemented")
+	default:
+		err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "unknown operator")
 	}
 
 	return res, err
 }
 
 func TermEval(t Term) (res interface{}, err error) {
-	left, err := Evaluate(t.Left)
+	l, err := Evaluate(t.Left)
 	if err != nil {
 		return
 	}
 
-	right, err := Evaluate(t.Right)
+	r, err := Evaluate(t.Right)
 	if err != nil {
 		return
 	}
 
-	leftConv, rightConv, isFloat := floatIntPrecedence(left, right)
+	l, r, precedence := typePrecedence(l, r)
+	if precedence == UNKNOWN {
+		err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot convert operands")
+	}
 
 	switch t.Operator.Type {
 	case lexer.PLUS:
-		if isFloat {
-			res = Literal{leftConv.(float64) + rightConv.(float64)}
-		} else {
-			res = Literal{leftConv.(int) + rightConv.(int)}
+		switch precedence {
+		case BOOL:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+		case UINT:
+			res = l.(uint) + r.(uint)
+		case INT:
+			res = l.(int) + r.(int)
+		case FLOAT:
+			res = l.(float64) + r.(float64)
+		case STRING:
+			res = l.(string) + r.(string)
 		}
 	case lexer.MINUS:
-		if isFloat {
-			res = Literal{leftConv.(float64) - rightConv.(float64)}
-		} else {
-			res = Literal{leftConv.(int) - rightConv.(int)}
+		switch precedence {
+		case BOOL:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+		case UINT:
+			res = l.(uint) - r.(uint)
+		case INT:
+			res = l.(int) - r.(int)
+		case FLOAT:
+			res = l.(float64) - r.(float64)
+		case STRING:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
 		}
 	}
+
 	return
 }
 
@@ -205,48 +403,114 @@ func FactorEval(t Factor) (res interface{}, err error) {
 		return
 	}
 
-	leftConv, rightConv, isFloat := floatIntPrecedence(l, r)
+	l, r, precedence := typePrecedence(l, r)
+	if precedence == UNKNOWN {
+		err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot implicit convert operands")
+	}
 
 	switch t.Operator.Type {
 	case lexer.STAR:
-		if isFloat {
-			res = leftConv.(float64) * rightConv.(float64)
-		} else {
-			res = leftConv.(int) * rightConv.(int)
+		switch precedence {
+		case BOOL:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot multiply bool values")
+		case UINT:
+			res = l.(uint) * r.(uint)
+		case INT:
+			res = l.(int) * r.(int)
+		case FLOAT:
+			res = l.(float64) * r.(float64)
+		case STRING:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot multiply string values")
 		}
 	case lexer.SLASH:
-		if isFloat {
-			res = leftConv.(float64) / rightConv.(float64)
-		} else {
-			res = leftConv.(int) / rightConv.(int)
+		switch precedence {
+		case BOOL:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+		case UINT:
+			res = l.(uint) - r.(uint)
+		case INT:
+			res = l.(int) - r.(int)
+		case FLOAT:
+			res = l.(float64) - r.(float64)
+		case STRING:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
 		}
 	case lexer.MOD:
-		left, err := toInt(l)
-		if err != nil {
-			return nil, err
+		switch precedence {
+		case BOOL:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+		case UINT:
+			res = l.(uint) - r.(uint)
+		case INT:
+			res = l.(int) - r.(int)
+		case FLOAT:
+			res = l.(float64) - r.(float64)
+		case STRING:
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
 		}
-		right, err := toInt(r)
-		if err != nil {
-			return nil, err
-		}
-		res = left % right
 	}
 
 	return
 }
 
 // TODO: implementar erro
-func floatIntPrecedence(l any, r any) (any, any, bool) {
+func typePrecedence(l any, r any) (any, any, int) {
 	lType := getType(l)
 	rType := getType(r)
 
-	if lType == FLOAT || rType == FLOAT {
-		left, _ := toFloat(l)
-		right, _ := toFloat(r)
-		return left, right, true
-	} else {
-		left, _ := toInt(l)
-		right, _ := toInt(r)
-		return left, right, false
+	switch lType {
+	case FLOAT:
+		switch rType {
+		case FLOAT:
+			return l, r, FLOAT
+		case INT:
+			return l, float64(r.(int)), FLOAT
+		case BOOL:
+			return l, utils.Ternary(r.(bool), 1.0, 0.0), FLOAT
+		default:
+			return l, r, UNKNOWN
+		}
+	case INT:
+		switch rType {
+		case FLOAT:
+			return float64(l.(int)), r, FLOAT
+		case INT:
+			return l, r, INT
+		case BOOL:
+			return l, utils.Ternary(r.(bool), 1, 0), INT
+		default:
+			return l, r, UNKNOWN
+		}
+	case UINT:
+		switch rType {
+		case UINT:
+			return l, r, UINT
+		case BOOL:
+			return l, utils.Ternary(r.(bool), uint(1), uint(0)), UINT
+		default:
+			return l, r, UNKNOWN
+		}
+	case BOOL:
+		switch rType {
+		case FLOAT:
+			return utils.Ternary(l.(bool), 1.0, 0.0), r, FLOAT
+		case INT:
+			return utils.Ternary(l.(bool), 1, 0), r, INT
+		case UINT:
+			return utils.Ternary(l.(bool), uint(1), uint(0)), r, UINT
+		case BOOL:
+			return l, r, BOOL
+		default:
+			return l, r, UNKNOWN
+		}
+	case STRING:
+		switch rType {
+		case STRING:
+			return l, r, STRING
+		default:
+			return l, r, UNKNOWN
+		}
+	default:
+		return l, r, UNKNOWN
 	}
 }

@@ -1,14 +1,9 @@
 package parser
 
-import (
-	"fmt"
-
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
-)
-
 const (
-	INT = iota
-	BOOL
+	BOOL = iota
+	UINT
+	INT
 	FLOAT
 	STRING
 	UNKNOWN
@@ -18,6 +13,8 @@ func getType(t interface{}) int {
 	switch t.(type) {
 	case int:
 		return INT
+	case uint:
+		return UINT
 	case bool:
 		return BOOL
 	case float64:
@@ -29,7 +26,15 @@ func getType(t interface{}) int {
 	}
 }
 
-func toInt(value any) (r int, err error) {
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+/* func toInt(value any) (r int, err error) {
 	switch v := value.(type) {
 	case int:
 		r = v
@@ -65,4 +70,4 @@ func toFloat(value any) (r float64, err error) {
 		r = 0
 	}
 	return
-}
+} */
