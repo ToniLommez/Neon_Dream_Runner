@@ -14,6 +14,11 @@ type Parser struct {
 
 func (p *Parser) Parse() Expr {
 	expr, err := p.expression()
+	if len(p.tokens) != p.current+1 {
+		token := p.tokens[p.current]
+		err = errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, "unexpected value found")
+	}
+
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -93,7 +98,7 @@ func (p *Parser) ternary() (Expr, error) {
 	}
 
 	for p.match(l.CHECK) {
-		trueExpr, err := p.primary()
+		trueExpr, err := p.expression()
 		if err != nil {
 			return expr, err
 		}
@@ -103,7 +108,7 @@ func (p *Parser) ternary() (Expr, error) {
 			return expr, err
 		}
 
-		falseExpr, err := p.primary()
+		falseExpr, err := p.expression()
 		if err != nil {
 			return expr, err
 		}
@@ -411,6 +416,7 @@ func (p *Parser) cast() (Expr, error) {
 	}
 
 	for p.match(l.COLON) {
+		actual := p.current
 		right, err := p.primary()
 		if err != nil {
 			return expr, err
@@ -420,8 +426,8 @@ func (p *Parser) cast() (Expr, error) {
 		case Type:
 			expr = Cast{Left: expr, TypeCast: t.Name}
 		default:
-			token := p.tokens[p.current]
-			return expr, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, "expect type to cast")
+			p.current = actual - 1
+			return expr, nil
 		}
 	}
 

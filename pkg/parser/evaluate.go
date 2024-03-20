@@ -425,28 +425,40 @@ func FactorEval(t Factor) (res interface{}, err error) {
 	case lexer.SLASH:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot divide bool values")
 		case UINT:
-			res = l.(uint) - r.(uint)
+			if r.(uint) == 0 {
+				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+			} else {
+				res = l.(uint) / r.(uint)
+			}
 		case INT:
-			res = l.(int) - r.(int)
+			if r.(int) == 0 {
+				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+			} else {
+				res = l.(int) / r.(int)
+			}
 		case FLOAT:
-			res = l.(float64) - r.(float64)
+			if r.(float64) == 0 {
+				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+			} else {
+				res = l.(float64) / r.(float64)
+			}
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot divide strings")
 		}
 	case lexer.MOD:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod bool values")
 		case UINT:
-			res = l.(uint) - r.(uint)
+			res = l.(uint) % r.(uint)
 		case INT:
-			res = l.(int) - r.(int)
+			res = l.(int) % r.(int)
 		case FLOAT:
-			res = l.(float64) - r.(float64)
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod float values")
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
+			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod strings")
 		}
 	}
 
