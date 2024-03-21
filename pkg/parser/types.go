@@ -1,9 +1,13 @@
 package parser
 
+import (
+	"unsafe"
+)
+
 const (
 	BOOL = iota
-	UINT
 	INT
+	UINT
 	FLOAT
 	STRING
 	UNKNOWN
@@ -34,40 +38,50 @@ func boolToInt(b bool) int {
 	}
 }
 
-/* func toInt(value any) (r int, err error) {
-	switch v := value.(type) {
-	case int:
-		r = v
-	case float64:
-		r = int(v)
-	case bool:
-		if v {
-			r = 1
-		} else {
-			r = 0
-		}
-	default:
-		err = errutils.Error(-1, -1, fmt.Sprintf("%v", value), errutils.RUNTIME, fmt.Sprintf("Error converting %v to Int", value))
-		r = 0
-	}
-	return
+func RotateLeftUint(x uint, n uint) uint {
+	size := uint(unsafe.Sizeof(x) * 8)
+	n %= size
+	return (x << n) | (x >> (size - n))
 }
 
-func toFloat(value any) (r float64, err error) {
+func RotateRightUint(x uint, n uint) uint {
+	size := uint(unsafe.Sizeof(x) * 8)
+	n %= size
+	return (x >> n) | (x << (size - n))
+}
+
+func RotateLeftInt(x int, n uint) int {
+	size := uint(unsafe.Sizeof(x) * 8)
+	n %= size
+	return (x << n) | (x >> (size - n))
+}
+
+func RotateRightInt(x int, n uint) int {
+	size := uint(unsafe.Sizeof(x) * 8)
+	n %= size
+	return (x >> n) | (x << (size - n))
+}
+
+func toUint(value interface{}) uint {
 	switch v := value.(type) {
-	case int:
-		r = float64(v)
-	case float64:
-		r = v
 	case bool:
 		if v {
-			r = 1.0
-		} else {
-			r = 0.0
+			return 1
 		}
+		return 0
+	case int:
+		if v < 0 {
+			return 0
+		}
+		return uint(v)
+	case uint:
+		return v
+	case float64:
+		if v < 0.0 || v != float64(uint(v)) {
+			return 0
+		}
+		return uint(v)
 	default:
-		err = errutils.Error(-1, -1, fmt.Sprintf("%v", value), errutils.RUNTIME, fmt.Sprintf("Error converting %v to Float", value))
-		r = 0
+		return 0
 	}
-	return
-} */
+}

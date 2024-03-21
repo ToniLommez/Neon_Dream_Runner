@@ -53,9 +53,9 @@ func (s *Scanner) advance() byte {
 func (s *Scanner) addToken(tokenType TokenType, literal interface{}) {
 	text := s.source[s.start:s.current]
 	if tokenType == STRING_LITERAL {
-		s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: "\"" + text + "\"", Literal: literal, Line: s.line, Column: s.column})
+		s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: "\"" + text + "\"", Literal: literal, Line: s.line, Column: s.column - len(text)})
 	} else {
-		s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line, Column: s.column})
+		s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line, Column: s.column - len(text)})
 	}
 }
 

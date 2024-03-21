@@ -21,7 +21,7 @@ type neonError struct {
 }
 
 func (e neonError) Error() string {
-	space := strings.Repeat(" ", e.column)
+	space := strings.Repeat(" ", e.column+1)
 	pointer := strings.Repeat("^", len(e.lexeme))
 
 	message := space + pointer + "\n"

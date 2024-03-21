@@ -79,8 +79,9 @@ type Factor struct {
 }
 
 type Power struct {
-	Left  Expr
-	Right Expr
+	Left     Expr
+	Operator l.Token
+	Right    Expr
 }
 
 // Position = 0 is Left, 1 is Right
@@ -125,7 +126,8 @@ type Check struct {
 
 type Cast struct {
 	Left     Expr
-	TypeCast l.Token
+	Operator l.Token
+	TypeCast Expr
 }
 
 type Identifier struct {

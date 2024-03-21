@@ -273,12 +273,13 @@ func (p *Parser) power() (Expr, error) {
 	}
 
 	for p.match(l.POW) {
+		operator := p.previous()
 		right, err := p.increment()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Power{Left: expr, Right: right}
+		expr = Power{Left: expr, Right: right, Operator: operator}
 	}
 
 	return expr, nil
@@ -416,6 +417,7 @@ func (p *Parser) cast() (Expr, error) {
 	}
 
 	for p.match(l.COLON) {
+		operator := p.previous()
 		actual := p.current
 		right, err := p.primary()
 		if err != nil {
@@ -424,7 +426,7 @@ func (p *Parser) cast() (Expr, error) {
 
 		switch t := right.(type) {
 		case Type:
-			expr = Cast{Left: expr, TypeCast: t.Name}
+			expr = Cast{Left: expr, TypeCast: t, Operator: operator}
 		default:
 			p.current = actual - 1
 			return expr, nil
@@ -450,7 +452,7 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(l.NIL) {
 		return Literal{nil}, nil
 	}
-	if p.match(l.INT, l.INT8, l.INT16, l.INT32, l.INT64, l.UINT, l.UINT8, l.UINT16, l.UINT32, l.UINT64, l.FLOAT, l.FLOAT32, l.FLOAT64, l.BOOL, l.CHAR, l.STRING, l.BYTE, l.ANY) {
+	if p.match(l.INT, l.I8, l.I16, l.I32, l.I64, l.UINT, l.U8, l.U16, l.U32, l.U64, l.FLOAT, l.F32, l.F64, l.BOOL, l.CHAR, l.STRING, l.BYTE, l.ANY) {
 		return Type{Name: p.previous()}, nil
 	}
 
