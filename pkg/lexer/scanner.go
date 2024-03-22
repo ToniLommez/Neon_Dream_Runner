@@ -27,7 +27,7 @@ func NewScanner(source string) Scanner {
 	}
 }
 
-func (s *Scanner) ScanTokens() ([]Token, error) {
+func (s *Scanner) ScanTokens(isFile bool) ([]Token, error) {
 	for !s.isAtEnd() {
 		s.start = s.current
 		if err := s.scanToken(); err != nil {
@@ -35,8 +35,11 @@ func (s *Scanner) ScanTokens() ([]Token, error) {
 		}
 	}
 
-	// Adicionar token de EOF ao final
-	s.tokens = append(s.tokens, Token{Type: EOF, Line: s.line})
+	if isFile {
+		s.tokens = append(s.tokens, Token{Type: EOF, Line: s.line})
+	} else {
+		s.tokens = append(s.tokens, Token{Type: NEW_LINE, Line: s.line})
+	}
 	return s.tokens, nil
 }
 

@@ -55,6 +55,10 @@ func (p *Parser) isAtEnd() bool {
 	return p.peek().Type == l.EOF
 }
 
+func (p *Parser) isLastToken() bool {
+	return len(p.tokens) <= p.current+1
+}
+
 func (p *Parser) peek() l.Token {
 	return p.tokens[p.current]
 }
@@ -108,6 +112,7 @@ func (p *Parser) Synchronize() {
 		case l.ELSE:
 		case l.WHEN:
 		case l.TRAIT:
+		case l.PUT:
 		case l.PRINT:
 		case l.PRINTF:
 		case l.PRINTLN:

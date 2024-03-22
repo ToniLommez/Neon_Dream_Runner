@@ -13,8 +13,6 @@ func parenthesize(name string, exprs ...Expr) string {
 	return parts
 }
 
-// String()
-
 func (x Equality) String() string {
 	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
 }

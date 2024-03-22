@@ -1,0 +1,56 @@
+program       → declaration* EOF
+
+declaration   → varDecl | statement
+statement     → exprStmt | printStmt
+
+varDecl       → "let" ("!")? ("?")? identifier ( "=" expression )?
+
+exprStmt      → expression "\n"
+printStmt     → "put" expression "\n"
+
+expression    → sequence
+sequence      → assign ( ";" assign )*
+assign        → pipeline ( ( "+" | "-" | "*" | "/" | "%" | "**" | "<<" "<"? | ">>" ">"? | "~" | "&" | "|" | "^" )? "=" expression )*
+pipeline      → ternary ( ( "<|"  expression ) | ( "|>"  ternary ) )*
+ternary       → interval ( "?" expression ":" expression )*
+interval      → logic ( ".." expression )?
+logic         → equality ( ( "&&" | "||" ) equality )*   
+equality      → comparison ( ( "!=" | "==" ) comparison )*
+comparison    → bitshift ( ( ">=" | "<=" | ">" | "<" ) bitshift )*
+bitshift      → bitwise ( ( "<<" | ">>" | "<<<" | ">>>" ) bitwise )*
+bitwise       → term ( ( ( "~" )? "&" | "|" | "^" ) term )*
+term          → factor ( ( "+" | "-" ) factor )*
+factor        → power ( ( "*" | "/" | "%" ) power )*
+power         → increment ( "**" increment )*
+increment     → ( ( "++" | "--" ) expression )? pointer ( "++" | "--" )?
+pointer       → ( ( "*" | "&" ) pointer )? unary
+unary         → ( ( "!" | "~" | "+" | "-" | "<!" )? unary ) access
+access        → validate ( ( ( "?." | "!." | "." ) validate ) | ( "[" expression "]" ) )*
+validate      → catch ( "?:" ( catch )? )?
+catch         → cast ( "?" ( return )? ( block )? )?
+cast          → primary ( ":" type )*
+primary       → ( identifier | string | number | float | booleans | nil | type )? declaration
+declaration   → array | slice | tuple | map
+group         → ( "(" expression ")" )? block
+block         → "{" statement "}"
+
+type          → object_type | builtin_type | especial_type
+object_type   → "int" | "uint" | "float" | "bool" | "char" | "string" | "byte"
+builtin_type  → "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | "f32" | "f64"
+especial_type → "any"
+
+array         → ( "[" type ":" expression "]" )? "[" ( expression ( "," expression )* )? "]"
+slice         → ( "[" type "]" )? "[" ( expression ("," expression )* )? "]"
+tuple         → "(" ( expression ( "," expression )* )? ")"
+map           → "|" "(" type ( "," type )* ")" ":" type ( "," type )* "|"
+object        → identifier "{" ( identifier ":" expression ( "," identifier ":" expression )* )? "}"
+identifier    → letter ( letter | digit | "_" )*
+float         → ( number )+ "." ( number )+ ( ( "e" | "E" ) ( "+" | "-" )+ ( number )+ )+
+number        → digit+
+booleans      → "true" | "false"
+nil           → "nil"
+string        → """ ( char )* """
+char          → digit | symbol | letter
+digit         → [0-9]
+symbols       → " " | "!" | "@" | "#" | ...
+letter        → [a-z] | [A-Z]

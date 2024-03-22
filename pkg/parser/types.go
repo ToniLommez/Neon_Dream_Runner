@@ -6,6 +6,7 @@ import (
 
 const (
 	BOOL = iota
+	CHAR
 	INT
 	UINT
 	FLOAT
@@ -15,12 +16,14 @@ const (
 
 func getType(t interface{}) int {
 	switch t.(type) {
+	case bool:
+		return BOOL
+	case rune:
+		return CHAR
 	case int:
 		return INT
 	case uint:
 		return UINT
-	case bool:
-		return BOOL
 	case float64:
 		return FLOAT
 	case string:

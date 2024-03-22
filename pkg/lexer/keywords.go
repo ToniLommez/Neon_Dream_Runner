@@ -35,6 +35,7 @@ var keywords = map[string]TokenType{
 	"trait":   TRAIT,
 	"this":    THIS,
 
+	"put":     PUT,
 	"print":   PRINT,
 	"printf":  PRINTF,
 	"println": PRINTLN,

@@ -12,8 +12,19 @@ type Parser struct {
 	current int
 }
 
-func (p *Parser) Parse() Expr {
-	expr, err := p.expression()
+func (p *Parser) Parse() ([]Stmt, error) {
+	stmt := make([]Stmt, 0)
+
+	for !p.isLastToken() && !p.isAtEnd() {
+		s, err := p.statement()
+		if err != nil {
+			return stmt, err
+		}
+
+		stmt = append(stmt, s)
+	}
+
+	/* expr, err := p.expression()
 	if len(p.tokens) != p.current+1 {
 		token := p.tokens[p.current]
 		err = errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, "unexpected value found")
@@ -22,8 +33,47 @@ func (p *Parser) Parse() Expr {
 	if err != nil {
 		fmt.Println(err)
 		return nil
+	} */
+
+	return stmt, nil
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(l.PUT) {
+		return p.putStatement()
 	}
-	return expr
+
+	return p.expressionStatement()
+}
+
+func (p *Parser) putStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return expr, err
+	}
+
+	t, err := p.consume(l.NEW_LINE)
+	if err != nil {
+		t = p.peek()
+		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line after print")
+	}
+
+	return PutStmt{Value: expr}, nil
+}
+
+func (p *Parser) expressionStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return expr, err
+	}
+
+	t, err := p.consume(l.NEW_LINE)
+	if err != nil {
+		t = p.peek()
+		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line before new expression")
+	}
+
+	return ExprStmt{Expr: expr}, nil
 }
 
 func (p *Parser) expression() (Expr, error) {
@@ -53,7 +103,7 @@ func (p *Parser) assign() (Expr, error) {
 		return expr, err
 	}
 
-	for p.match(l.ASSIGN, l.ADD_ASSIGN, l.SUB_ASSIGN, l.MUL_ASSIGN, l.DIV_ASSIGN, l.MOD_ASSIGN, l.POW_ASSIGN, l.BITSHIFT_LEFT_ASSIGN, l.BITSHIFT_RIGHT_ASSIGN, l.ROUNDSHIFT_LEFT_ASSIGN, l.ROUNDSHIFT_RIGHT_ASSIGN, l.AND_ASSIGN, l.OR_ASSIGN, l.XOR_ASSIGN, l.NOT_ASSIGN, l.NAND_ASSIGN, l.NOR_ASSIGN, l.XNOR_ASSIGN) {
+	for p.match(l.ASSIGN, l.ADD_ASSIGN, l.SUB_ASSIGN, l.MUL_ASSIGN, l.DIV_ASSIGN, l.MOD_ASSIGN, l.POW_ASSIGN, l.BITSHIFT_LEFT_ASSIGN, l.BITSHIFT_RIGHT_ASSIGN, l.ROUNDSHIFT_LEFT_ASSIGN, l.ROUNDSHIFT_RIGHT_ASSIGN, l.AND_ASSIGN, l.OR_ASSIGN, l.XOR_ASSIGN, l.NAND_ASSIGN, l.NOR_ASSIGN, l.XNOR_ASSIGN) {
 		operator := p.previous()
 		right, err := p.expression()
 		if err != nil {
@@ -143,7 +193,7 @@ func (p *Parser) logic() (Expr, error) {
 		return expr, err
 	}
 
-	for p.match(l.OR_LOGIC, l.AND_LOGIC) {
+	for p.match(l.AND_LOGIC, l.OR_LOGIC) {
 		operator := p.previous()
 		right, err := p.equality()
 		if err != nil {
@@ -365,9 +415,9 @@ func (p *Parser) validate() (Expr, error) {
 		return expr, err
 	}
 
-	for p.match(l.ELVIS) {
+	if p.match(l.ELVIS) {
 		x := p.peek()
-		if x.Type == l.NEW_LINE || x.Type == l.EOF || x.Type == l.RIGHT_BRACE || x.Type == l.RIGHT_PAREN || x.Type == l.RIGHT_BRACKET {
+		if x.Type == l.NEW_LINE || x.Type == l.RIGHT_BRACE || x.Type == l.RIGHT_PAREN || x.Type == l.RIGHT_BRACKET {
 			expr = Elvis{Left: expr, ReturnZero: true, Right: nil}
 		} else {
 			right, err := p.catch()
@@ -391,7 +441,7 @@ func (p *Parser) catch() (Expr, error) {
 	tmp := p.peek()
 	if tmp.Type == l.CHECK {
 		found, x := p.peekN(1)
-		if !found || x.Type == l.NEW_LINE || x.Type == l.EOF {
+		if !found || x.Type == l.NEW_LINE {
 			p.advance()
 			expr = Check{Left: expr, HaveReturn: false, Right: nil}
 		} else {
@@ -443,11 +493,11 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(l.STRING_LITERAL, l.NUMBER_LITERAL, l.FLOAT_LITERAL) {
 		return Literal{p.previous().Literal}, nil
 	}
-	if p.match(l.FALSE) {
-		return Literal{false}, nil
-	}
 	if p.match(l.TRUE) {
 		return Literal{true}, nil
+	}
+	if p.match(l.FALSE) {
+		return Literal{false}, nil
 	}
 	if p.match(l.NIL) {
 		return Literal{nil}, nil
@@ -534,13 +584,24 @@ func (p *Parser) group() (Expr, error) {
 
 func (p *Parser) block() (Expr, error) {
 	if p.match(l.LEFT_BRACE) {
+		/* 		if p.isLastToken() {
+			final := p.previous()
+			return nil, errutils.Error(final.Line, final.Column, final.Lexeme, errutils.UNTERMINATED_STATEMENT, "unterminated statement")
+		} */
+
 		expr, err := p.expression()
 		if err != nil {
 			return expr, err
 		}
+
+		/* if p.isLastToken() {
+			final := p.previous()
+			return nil, errutils.Error(final.Line, final.Column, final.Lexeme, errutils.UNTERMINATED_STATEMENT, "unterminated statement")
+		} */
 		if _, err := p.consume(l.RIGHT_BRACE); err != nil {
 			return expr, err
 		}
+
 		return Grouping{expr}, nil
 	}
 

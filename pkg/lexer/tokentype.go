@@ -120,6 +120,7 @@ const (
 	TRIGGER        TokenType = "TRIGGER" // trigger
 	TRAIT          TokenType = "TRAIT"   // trait
 	THIS           TokenType = "THIS"    // this
+	PUT            TokenType = "PUT"     // put
 	PRINT          TokenType = "PRINT"   // print
 	PRINTF         TokenType = "PRINTF"  // printf
 	PRINTLN        TokenType = "PRINTLN" // println
@@ -145,5 +146,5 @@ const (
 	ANY            TokenType = "ANY"     // any
 
 	// Special
-	EOF TokenType = "eof" // EOF
+	EOF TokenType = "EOF" // EOF
 )

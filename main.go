@@ -6,10 +6,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 	p "github.com/ToniLommez/Neon_Dream_Runner/pkg/parser"
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
+	u "github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
 
 func runFile(path string) error {
@@ -23,15 +23,22 @@ func runFile(path string) error {
 		return fmt.Errorf("erro reading file: %s", err)
 	}
 
-	return run(string(content))
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		content = append(content, '\n')
+	}
+
+	var neon p.Neon
+	return run(string(content), true, neon)
 }
 
-func runPrompt() (err error) {
+func runRepl() error {
 	s := bufio.NewScanner(os.Stdin)
+	var neon p.Neon
 	prompt := ""
 
 	for {
 		fmt.Print("> ")
+
 		if s.Scan() {
 			prompt = s.Text()
 
@@ -39,37 +46,61 @@ func runPrompt() (err error) {
 			case "exit":
 				return nil
 			case "clear":
-				utils.ClearScreen()
-			case "":
+				u.ClearScreen()
 			default:
-				err = run(prompt)
+				err := run(prompt, false, neon)
 				if err != nil {
-					fatal := errutils.Deal(err)
+					fatal := e.Deal(err)
 					if fatal != nil {
 						return fatal
 					}
 				}
 			}
 		} else {
-			return s.Err() // Retorna um erro se a leitura falhar
+			return s.Err()
 		}
 	}
 }
 
-func run(input string) (err error) {
+// TODO: transfer anything that belongs do "program" to a new package named neon and encapsulate everything
+// TODO: fork into runRepl and runFile
+func run(input string, isFile bool, neon p.Neon) (err error) {
+	// Scan new tokens
 	var ts []l.Token
 	s := l.NewScanner(input)
-	if ts, err = s.ScanTokens(); err != nil {
+	if ts, err = s.ScanTokens(isFile); err != nil {
 		return err
 	}
 
-	parser := p.NewParser(ts)
-	expr := parser.Parse()
-	result, err := p.Evaluate(expr)
+	// Concatenate with buffered tokens to parse
+	neon.TokensBuffer = append(neon.TokensBuffer, ts...)
+
+	// Parse
+	pr := p.NewParser(neon.TokensBuffer)
+	statement, err := pr.Parse()
+
+	// In REPL if a incomplete statemente is found, buffer it and wait till complete before evaluate
+	if !isFile && err != nil && (err.(e.NeonError)).ErrorType == e.UNTERMINATED_STATEMENT {
+		return nil
+	} else if err != nil {
+		neon.TokensBuffer = nil
+		return err
+	}
+
+	// If correctly parsed save the statement
+	neon.Tokens = neon.TokensBuffer
+	neon.TokensBuffer = nil
+	neon.Main = statement
+
+	// Evaluate the AST
+	_, err = neon.Interpret(statement)
 	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(result)
+		return err
+	}
+
+	// debug
+	for _, s := range statement {
+		fmt.Println(s)
 	}
 
 	return nil
@@ -77,13 +108,13 @@ func run(input string) (err error) {
 
 func main() {
 	if len(os.Args) > 2 {
-		os.Exit(64) //TODO: better response
+		os.Exit(64) // TODO: better response
 	} else if len(os.Args) == 2 {
 		if err := runFile(os.Args[1]); err != nil {
 			fmt.Println(err)
 		}
 	} else {
-		if err := runPrompt(); err != nil {
+		if err := runRepl(); err != nil {
 			fmt.Println(err)
 		}
 	}
