@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
+	n "github.com/ToniLommez/Neon_Dream_Runner/pkg/neon"
 	p "github.com/ToniLommez/Neon_Dream_Runner/pkg/parser"
 	u "github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
@@ -27,13 +29,30 @@ func runFile(path string) error {
 		content = append(content, '\n')
 	}
 
-	var neon p.Neon
-	return run(string(content), true, neon)
+	var neon n.Neon
+	neon.Text = strings.Split(string(content), "\n")
+
+	neon.IsLive = false
+	err = run(string(content), true, neon)
+	if err != nil {
+		var fatal error
+		if myErr, ok := err.(e.NeonError); ok {
+			fatal = e.Deal(err, neon.Text[myErr.Line-1])
+		} else {
+			fatal = e.Deal(err, "")
+		}
+
+		if fatal != nil {
+			return fatal
+		}
+	}
+	return nil
 }
 
 func runRepl() error {
 	s := bufio.NewScanner(os.Stdin)
-	var neon p.Neon
+	var neon n.Neon
+	neon.IsLive = false
 	prompt := ""
 
 	for {
@@ -50,7 +69,7 @@ func runRepl() error {
 			default:
 				err := run(prompt, false, neon)
 				if err != nil {
-					fatal := e.Deal(err)
+					fatal := e.Deal(err, "")
 					if fatal != nil {
 						return fatal
 					}
@@ -62,9 +81,9 @@ func runRepl() error {
 	}
 }
 
-// TODO: transfer anything that belongs do "program" to a new package named neon and encapsulate everything
+// TODO: transfer anything that belongs do "n" to a new package named neon and encapsulate everything
 // TODO: fork into runRepl and runFile
-func run(input string, isFile bool, neon p.Neon) (err error) {
+func run(input string, isFile bool, neon n.Neon) (err error) {
 	// Scan new tokens
 	var ts []l.Token
 	s := l.NewScanner(input)
@@ -93,7 +112,7 @@ func run(input string, isFile bool, neon p.Neon) (err error) {
 	neon.Main = statement
 
 	// Evaluate the AST
-	_, err = neon.Interpret(statement)
+	_, err = p.Interpret(statement)
 	if err != nil {
 		return err
 	}

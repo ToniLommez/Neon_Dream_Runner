@@ -16,7 +16,7 @@ func (p *Parser) Parse() ([]Stmt, error) {
 	stmt := make([]Stmt, 0)
 
 	for !p.isLastToken() && !p.isAtEnd() {
-		s, err := p.statement()
+		s, err := p.declaration()
 		if err != nil {
 			return stmt, err
 		}
@@ -24,18 +24,55 @@ func (p *Parser) Parse() ([]Stmt, error) {
 		stmt = append(stmt, s)
 	}
 
-	/* expr, err := p.expression()
-	if len(p.tokens) != p.current+1 {
-		token := p.tokens[p.current]
-		err = errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, "unexpected value found")
+	return stmt, nil
+}
+
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(l.LET) {
+		s, err := p.letStatement()
+
+		if err != nil {
+			p.Synchronize()
+			return s, err
+		}
+
+		return s, err
 	}
 
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	} */
+	return p.statement()
+}
 
-	return stmt, nil
+func (p *Parser) letStatement() (Stmt, error) {
+	var mutable, nullable bool
+	var initializer Expr
+	var name l.Token
+	var err error
+
+	if p.match(l.BANG) {
+		mutable = true
+	}
+	if p.match(l.CHECK) {
+		nullable = true
+	}
+
+	name, err = p.consume(l.IDENTIFIER)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(l.ASSIGN) {
+		initializer, err = p.expression()
+		if err != nil {
+			return initializer, err
+		}
+	}
+
+	if _, err := p.consume(l.NEW_LINE); err != nil {
+		t := p.peek()
+		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line after let statement")
+	}
+
+	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Initializer: initializer}, nil
 }
 
 func (p *Parser) statement() (Stmt, error) {
@@ -506,14 +543,14 @@ func (p *Parser) primary() (Expr, error) {
 		return Type{Name: p.previous()}, nil
 	}
 
-	return p.declaration()
+	return p.mapLiteral()
 }
 
-func (p *Parser) declaration() (Expr, error) {
+func (p *Parser) mapLiteral() (Expr, error) {
 	current := p.peek()
 	if current.Type == l.LEFT_BRACKET {
 		if _, next := p.peekN(1); next.Type.IsType() {
-			return p.arrayDeclaration()
+			return p.arrayLiteral()
 		}
 	} /* else if x.Type == l.LEFT_PAREN {
 
@@ -523,7 +560,7 @@ func (p *Parser) declaration() (Expr, error) {
 	return p.group()
 }
 
-func (p *Parser) arrayDeclaration() (Expr, error) {
+func (p *Parser) arrayLiteral() (Expr, error) {
 	p.advance()
 	arrayType := p.advance()
 	if _, err := p.consume(l.COLON); err != nil {

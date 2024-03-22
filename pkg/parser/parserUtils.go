@@ -79,15 +79,15 @@ func (p *Parser) consume(expected l.TokenType) (l.Token, error) {
 	if p.check(expected) {
 		return p.advance(), nil
 	}
-	token := p.previous()
-	return token, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect %s after expression.", expected))
+	token := p.peek()
+	return token, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect %s", expected))
 }
 
 func (p *Parser) Synchronize() {
 	p.advance()
 
-	for !p.isAtEnd() {
-		if p.previous().Type == l.SEMICOLON {
+	for !p.isLastToken() && !p.isAtEnd() {
+		if p.previous().Type == l.NEW_LINE {
 			return
 		}
 

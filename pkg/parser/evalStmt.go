@@ -23,3 +23,7 @@ func PutStmtEval(p PutStmt) (any, error) {
 
 	return expr, nil
 }
+
+/* func varStmtEval(s ExprStmt) (any, error) {
+	return evaluate(s.Expr)
+} */

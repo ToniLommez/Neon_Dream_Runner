@@ -41,8 +41,11 @@ func Error(line int, column int, lexeme string, errorType string, message string
 	}
 }
 
-func Deal(err error) (fatal error) {
+func Deal(err error, line string) (fatal error) {
 	if myErr, ok := err.(NeonError); ok {
+		if line != "" {
+			fmt.Fprintf(os.Stderr, "> %s\n", line)
+		}
 		fmt.Fprintf(os.Stderr, "%s\n", myErr)
 	} else {
 		fatal = fmt.Errorf("fatal error: %s", err)

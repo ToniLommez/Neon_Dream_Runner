@@ -29,8 +29,8 @@ access        → validate ( ( ( "?." | "!." | "." ) validate ) | ( "[" expressi
 validate      → catch ( "?:" ( catch )? )?
 catch         → cast ( "?" ( return )? ( block )? )?
 cast          → primary ( ":" type )*
-primary       → ( identifier | string | number | float | booleans | nil | type )? declaration
-declaration   → array | slice | tuple | map
+primary       → ( identifier | string | number | float | booleans | nil | type )? map_literal
+map_literal   → array | slice | tuple | map
 group         → ( "(" expression ")" )? block
 block         → "{" statement "}"
 

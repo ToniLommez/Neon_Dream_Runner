@@ -6,7 +6,7 @@ import (
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 )
 
-func (p *Neon) Interpret(instructions []Stmt) (any, error) {
+func Interpret(instructions []Stmt) (any, error) {
 	for _, i := range instructions {
 		if _, err := evaluate(i); err != nil {
 			return nil, err
