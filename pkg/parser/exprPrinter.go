@@ -46,7 +46,7 @@ func (x Identifier) String() string {
 }
 
 func (x Assign) String() string {
-	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
+	return parenthesize(x.Operator.Lexeme, x.Target, x.Value)
 }
 
 func (x Pipeline) String() string {

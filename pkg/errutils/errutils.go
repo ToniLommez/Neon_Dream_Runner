@@ -25,7 +25,13 @@ func (e NeonError) Error() string {
 	space := strings.Repeat(" ", e.Column+1)
 	pointer := strings.Repeat("^", len(e.Lexeme))
 
-	message := space + pointer + "\n"
+	message := space + pointer
+	if len(message) == 1 {
+		message = ""
+	} else {
+		message += "\n"
+	}
+
 	message += fmt.Sprintf("| %s\n", e.Message)
 	message += fmt.Sprintf("| [Line %d, Column %d] - %s error", e.Line, e.Column, e.ErrorType)
 	return message

@@ -6,6 +6,12 @@ type Stmt interface {
 	// String() string
 }
 
+type Scope struct {
+	Statements []Stmt
+	Values     Environment
+	Previous   *Scope
+}
+
 type ExprStmt struct {
 	Expr Expr
 }
@@ -18,5 +24,6 @@ type LetStmt struct {
 	Name        lexer.Token
 	Mutable     bool
 	Nullable    bool
+	Type        int
 	Initializer Expr
 }

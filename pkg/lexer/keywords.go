@@ -66,3 +66,7 @@ var keywords = map[string]TokenType{
 func (t TokenType) IsType() bool {
 	return t == INT || t == I8 || t == I16 || t == I32 || t == I64 || t == UINT || t == U8 || t == U16 || t == U32 || t == U64 || t == FLOAT || t == F32 || t == F64 || t == BOOL || t == CHAR || t == STRING || t == BYTE || t == ANY
 }
+
+func (t TokenType) IsValidType() bool {
+	return t == INT || t == UINT || t == FLOAT || t == BOOL || t == CHAR || t == STRING || t == UNDEFINED
+}

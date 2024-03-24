@@ -45,7 +45,7 @@ func (p *Parser) check(t l.TokenType) bool {
 }
 
 func (p *Parser) advance() l.Token {
-	if !p.isAtEnd() {
+	if !p.isLastToken() && !p.isAtEnd() {
 		p.current++
 	}
 	return p.previous()

@@ -14,9 +14,9 @@ type Sequence struct {
 }
 
 type Assign struct {
-	Left     Expr
+	Target   l.Token
 	Operator l.Token
-	Right    Expr
+	Value    Expr
 }
 
 type Pipeline struct {

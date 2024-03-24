@@ -120,16 +120,76 @@ func Truthy(value any) (r bool, err error) {
 	return
 }
 
-func SequenceEval(s Sequence) (any, error) {
-	if _, err := evaluate(s.Left); err != nil {
+func (s *Scope) SequenceEval(x Sequence) (any, error) {
+	if _, err := s.evaluate(x.Left); err != nil {
 		return nil, err
 	}
 
-	return evaluate(s.Right)
+	return s.evaluate(x.Right)
 }
 
-func TernaryEval(t Ternary) (any, error) {
-	test, err := evaluate(t.Expression)
+func (s *Scope) AssignEval(a Assign) (res any, err error) {
+	v, err := s.evaluate(a.Value)
+	if err != nil {
+		return
+	}
+
+	_, tv, d, err := s.Values.Get(a.Target)
+	if d {
+		if err != nil {
+			return
+		}
+
+		op := func(t lexer.Token, o lexer.TokenType) lexer.Token {
+			t.Type = o
+			return t
+		}
+
+		switch a.Operator.Type {
+		case lexer.ADD_ASSIGN:
+			v, err = s.TermEval(Term{Left: Literal{tv}, Operator: op(a.Operator, lexer.PLUS), Right: Literal{v}})
+		case lexer.SUB_ASSIGN:
+			v, err = s.TermEval(Term{Left: Literal{tv}, Operator: op(a.Operator, lexer.MINUS), Right: Literal{v}})
+		case lexer.MUL_ASSIGN:
+			v, err = s.FactorEval(Factor{Left: Literal{tv}, Operator: op(a.Operator, lexer.STAR), Right: Literal{v}})
+		case lexer.DIV_ASSIGN:
+			v, err = s.FactorEval(Factor{Left: Literal{tv}, Operator: op(a.Operator, lexer.SLASH), Right: Literal{v}})
+		case lexer.MOD_ASSIGN:
+			v, err = s.FactorEval(Factor{Left: Literal{tv}, Operator: op(a.Operator, lexer.MOD), Right: Literal{v}})
+		case lexer.POW_ASSIGN:
+			v, err = s.PowerEval(Power{Left: Literal{tv}, Operator: op(a.Operator, lexer.POW), Right: Literal{v}})
+		case lexer.BITSHIFT_LEFT_ASSIGN:
+			v, err = s.BitshiftEval(Bitshift{Left: Literal{tv}, Operator: op(a.Operator, lexer.SHIFT_LEFT), Right: Literal{v}})
+		case lexer.BITSHIFT_RIGHT_ASSIGN:
+			v, err = s.BitshiftEval(Bitshift{Left: Literal{tv}, Operator: op(a.Operator, lexer.SHIFT_RIGHT), Right: Literal{v}})
+		case lexer.ROUNDSHIFT_LEFT_ASSIGN:
+			v, err = s.BitshiftEval(Bitshift{Left: Literal{tv}, Operator: op(a.Operator, lexer.ROUNDSHIFT_LEFT), Right: Literal{v}})
+		case lexer.ROUNDSHIFT_RIGHT_ASSIGN:
+			v, err = s.BitshiftEval(Bitshift{Left: Literal{tv}, Operator: op(a.Operator, lexer.ROUNDSHIFT_RIGHT), Right: Literal{v}})
+		case lexer.AND_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.AND_BITWISE), Right: Literal{v}})
+		case lexer.OR_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.OR_BITWISE), Right: Literal{v}})
+		case lexer.XOR_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.XOR_BITWISE), Right: Literal{v}})
+		case lexer.NAND_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.NAND_BITWISE), Right: Literal{v}})
+		case lexer.NOR_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.NOR_BITWISE), Right: Literal{v}})
+		case lexer.XNOR_ASSIGN:
+			v, err = s.BitwiseEval(Bitwise{Left: Literal{tv}, Operator: op(a.Operator, lexer.XNOR_BITWISE), Right: Literal{v}})
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.Values.Set(a.Target, v)
+}
+
+func (s *Scope) TernaryEval(t Ternary) (any, error) {
+	test, err := s.evaluate(t.Expression)
 	if err != nil {
 		return nil, err
 	}
@@ -140,19 +200,19 @@ func TernaryEval(t Ternary) (any, error) {
 	}
 
 	if truthy {
-		return evaluate(t.True)
+		return s.evaluate(t.True)
 	} else {
-		return evaluate(t.False)
+		return s.evaluate(t.False)
 	}
 }
 
-func LogicEval(x Logic) (res interface{}, err error) {
-	l, err := evaluate(x.Left)
+func (s *Scope) LogicEval(x Logic) (res any, err error) {
+	l, err := s.evaluate(x.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(x.Right)
+	r, err := s.evaluate(x.Right)
 	if err != nil {
 		return
 	}
@@ -194,13 +254,13 @@ func LogicEval(x Logic) (res interface{}, err error) {
 	return
 }
 
-func EqualityEval(e Equality) (res interface{}, err error) {
-	l, err := evaluate(e.Left)
+func (s *Scope) EqualityEval(e Equality) (res any, err error) {
+	l, err := s.evaluate(e.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(e.Right)
+	r, err := s.evaluate(e.Right)
 	if err != nil {
 		return
 	}
@@ -242,13 +302,13 @@ func EqualityEval(e Equality) (res interface{}, err error) {
 	return
 }
 
-func ComparisonEval(c Comparison) (res interface{}, err error) {
-	l, err := evaluate(c.Left)
+func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
+	l, err := s.evaluate(c.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(c.Right)
+	r, err := s.evaluate(c.Right)
 	if err != nil {
 		return
 	}
@@ -316,13 +376,13 @@ func ComparisonEval(c Comparison) (res interface{}, err error) {
 	return
 }
 
-func BitshiftEval(b Bitshift) (res interface{}, err error) {
-	l, err := evaluate(b.Left)
+func (s *Scope) BitshiftEval(b Bitshift) (res any, err error) {
+	l, err := s.evaluate(b.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(b.Right)
+	r, err := s.evaluate(b.Right)
 	if err != nil {
 		return
 	}
@@ -389,13 +449,13 @@ func BitshiftEval(b Bitshift) (res interface{}, err error) {
 	return
 }
 
-func BitwiseEval(b Bitwise) (res interface{}, err error) {
-	l, err := evaluate(b.Left)
+func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
+	l, err := s.evaluate(b.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(b.Right)
+	r, err := s.evaluate(b.Right)
 	if err != nil {
 		return
 	}
@@ -489,13 +549,13 @@ func BitwiseEval(b Bitwise) (res interface{}, err error) {
 	return
 }
 
-func TermEval(t Term) (res interface{}, err error) {
-	l, err := evaluate(t.Left)
+func (s *Scope) TermEval(t Term) (res any, err error) {
+	l, err := s.evaluate(t.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(t.Right)
+	r, err := s.evaluate(t.Right)
 	if err != nil {
 		return
 	}
@@ -539,13 +599,13 @@ func TermEval(t Term) (res interface{}, err error) {
 	return
 }
 
-func FactorEval(t Factor) (res interface{}, err error) {
-	l, err := evaluate(t.Left)
+func (s *Scope) FactorEval(t Factor) (res any, err error) {
+	l, err := s.evaluate(t.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(t.Right)
+	r, err := s.evaluate(t.Right)
 	if err != nil {
 		return
 	}
@@ -612,13 +672,13 @@ func FactorEval(t Factor) (res interface{}, err error) {
 	return
 }
 
-func PowerEval(p Power) (res interface{}, err error) {
-	l, err := evaluate(p.Left)
+func (s *Scope) PowerEval(p Power) (res any, err error) {
+	l, err := s.evaluate(p.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := evaluate(p.Right)
+	r, err := s.evaluate(p.Right)
 	if err != nil {
 		return
 	}
@@ -647,8 +707,8 @@ func PowerEval(p Power) (res interface{}, err error) {
 	return
 }
 
-func UnaryEval(u Unary) (res any, err error) {
-	v, err := evaluate(u.Right)
+func (s *Scope) UnaryEval(u Unary) (res any, err error) {
+	v, err := s.evaluate(u.Right)
 	if err != nil {
 		return nil, err
 	}
@@ -703,13 +763,13 @@ func UnaryEval(u Unary) (res any, err error) {
 	return res, err
 }
 
-func CastEval(c Cast) (res any, err error) {
-	l, err := evaluate(c.Left)
+func (s *Scope) CastEval(c Cast) (res any, err error) {
+	l, err := s.evaluate(c.Left)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := evaluate(c.TypeCast)
+	r, err := s.evaluate(c.TypeCast)
 	if err != nil {
 		return nil, err
 	}
@@ -799,4 +859,13 @@ func CastEval(c Cast) (res any, err error) {
 	}
 
 	return res, err
+}
+
+func (s *Scope) IdentifierEval(i Identifier) (res any, err error) {
+	_, res, _, err = s.Values.Get(i.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return
 }

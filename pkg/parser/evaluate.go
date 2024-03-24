@@ -6,55 +6,58 @@ import (
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 )
 
-func Interpret(instructions []Stmt) (any, error) {
+func (p *Program) Interpret(instructions []Stmt) (any, error) {
 	for _, i := range instructions {
-		if _, err := evaluate(i); err != nil {
+		if _, err := p.Main.evaluate(i); err != nil {
 			return nil, err
 		}
-
 	}
+
+	// p.Main.Values.Debug()
 
 	return nil, nil
 }
 
-func evaluate(instruction any) (any, error) {
+func (s *Scope) evaluate(instruction any) (any, error) {
 	switch i := instruction.(type) {
-	case ExprStmt:
-		return ExprStmtEval(i)
+	case LetStmt:
+		return s.LetEval(i)
 	case PutStmt:
-		return PutStmtEval(i)
+		return s.PutEval(i)
+	case ExprStmt:
+		return s.ExprEval(i)
 	case Sequence:
-		return SequenceEval(i)
+		return s.SequenceEval(i)
 	case Assign:
-		return nil, nil
+		return s.AssignEval(i)
 	case Pipeline:
 		return nil, nil
 	case Ternary:
-		return TernaryEval(i)
+		return s.TernaryEval(i)
 	case Range:
 		return nil, nil
 	case Logic:
-		return LogicEval(i)
+		return s.LogicEval(i)
 	case Equality:
-		return EqualityEval(i)
+		return s.EqualityEval(i)
 	case Comparison:
-		return ComparisonEval(i)
+		return s.ComparisonEval(i)
 	case Bitshift:
-		return BitshiftEval(i)
+		return s.BitshiftEval(i)
 	case Bitwise:
-		return BitwiseEval(i)
+		return s.BitwiseEval(i)
 	case Term:
-		return TermEval(i)
+		return s.TermEval(i)
 	case Factor:
-		return FactorEval(i)
+		return s.FactorEval(i)
 	case Power:
-		return PowerEval(i)
+		return s.PowerEval(i)
 	case Increment:
 		return nil, nil
 	case Pointer:
 		return nil, nil
 	case Unary:
-		return UnaryEval(i)
+		return s.UnaryEval(i)
 	case Access:
 		return nil, nil
 	case PositionAccess:
@@ -64,9 +67,9 @@ func evaluate(instruction any) (any, error) {
 	case Check:
 		return nil, nil
 	case Cast:
-		return CastEval(i)
+		return s.CastEval(i)
 	case Identifier:
-		return nil, nil
+		return s.IdentifierEval(i)
 	case Literal:
 		return i.Value, nil
 	case Type:
@@ -74,7 +77,7 @@ func evaluate(instruction any) (any, error) {
 	case ArrayLiteral:
 		return nil, nil
 	case Grouping:
-		return evaluate(i.Expression)
+		return s.evaluate(i.Expression)
 	case nil:
 		return nil, e.Error(0, 0, "", e.RUNTIME, "nil instruction should not be found")
 	default:

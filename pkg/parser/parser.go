@@ -3,7 +3,7 @@ package parser
 import (
 	"fmt"
 
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 )
 
@@ -45,7 +45,7 @@ func (p *Parser) declaration() (Stmt, error) {
 func (p *Parser) letStatement() (Stmt, error) {
 	var mutable, nullable bool
 	var initializer Expr
-	var name l.Token
+	var name, varType l.Token
 	var err error
 
 	if p.match(l.BANG) {
@@ -60,6 +60,14 @@ func (p *Parser) letStatement() (Stmt, error) {
 		return nil, err
 	}
 
+	varType = l.Token{Type: l.UNDEFINED, Lexeme: "", Literal: "", Line: name.Line, Column: name.Column}
+	if p.match(l.COLON) {
+		varType = p.advance()
+		if !varType.Type.IsValidType() {
+			return nil, e.Error(varType.Line, varType.Column, varType.Lexeme, e.PARSER, "expect type in let statement")
+		}
+	}
+
 	if p.match(l.ASSIGN) {
 		initializer, err = p.expression()
 		if err != nil {
@@ -69,10 +77,10 @@ func (p *Parser) letStatement() (Stmt, error) {
 
 	if _, err := p.consume(l.NEW_LINE); err != nil {
 		t := p.peek()
-		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line after let statement")
+		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after let statement")
 	}
 
-	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Initializer: initializer}, nil
+	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Type: tokenToType(varType), Initializer: initializer}, nil
 }
 
 func (p *Parser) statement() (Stmt, error) {
@@ -92,7 +100,7 @@ func (p *Parser) putStatement() (Stmt, error) {
 	t, err := p.consume(l.NEW_LINE)
 	if err != nil {
 		t = p.peek()
-		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line after print")
+		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after print")
 	}
 
 	return PutStmt{Value: expr}, nil
@@ -107,7 +115,7 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 	t, err := p.consume(l.NEW_LINE)
 	if err != nil {
 		t = p.peek()
-		return nil, errutils.Error(t.Line, t.Column, t.Lexeme, errutils.RUNTIME, "expect new line before new expression")
+		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line before new expression")
 	}
 
 	return ExprStmt{Expr: expr}, nil
@@ -141,13 +149,18 @@ func (p *Parser) assign() (Expr, error) {
 	}
 
 	for p.match(l.ASSIGN, l.ADD_ASSIGN, l.SUB_ASSIGN, l.MUL_ASSIGN, l.DIV_ASSIGN, l.MOD_ASSIGN, l.POW_ASSIGN, l.BITSHIFT_LEFT_ASSIGN, l.BITSHIFT_RIGHT_ASSIGN, l.ROUNDSHIFT_LEFT_ASSIGN, l.ROUNDSHIFT_RIGHT_ASSIGN, l.AND_ASSIGN, l.OR_ASSIGN, l.XOR_ASSIGN, l.NAND_ASSIGN, l.NOR_ASSIGN, l.XNOR_ASSIGN) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.expression()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Assign{expr, operator, right}
+		switch i := expr.(type) {
+		case Identifier:
+			expr = Assign{Target: i.Name, Operator: op, Value: right}
+		default:
+			return expr, e.Error(op.Line, op.Column, op.Lexeme, e.PARSER, "assignment target should be a identifier")
+		}
 	}
 
 	return expr, nil
@@ -160,10 +173,10 @@ func (p *Parser) pipeline() (Expr, error) {
 	}
 
 	for p.match(l.PIPELINE_LEFT, l.PIPELINE_RIGHT) {
-		operator := p.previous()
+		op := p.previous()
 
 		var right Expr
-		if operator.Type == l.PIPELINE_LEFT {
+		if op.Type == l.PIPELINE_LEFT {
 			right, err = p.expression()
 		} else {
 			right, err = p.ternary()
@@ -172,7 +185,7 @@ func (p *Parser) pipeline() (Expr, error) {
 		if err != nil {
 			return expr, err
 		}
-		expr = Pipeline{Left: expr, Operator: operator, Right: right}
+		expr = Pipeline{Left: expr, Operator: op, Right: right}
 	}
 
 	return expr, nil
@@ -231,13 +244,13 @@ func (p *Parser) logic() (Expr, error) {
 	}
 
 	for p.match(l.AND_LOGIC, l.OR_LOGIC) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.equality()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Logic{Left: expr, Operator: operator, Right: right}
+		expr = Logic{Left: expr, Operator: op, Right: right}
 	}
 
 	return expr, nil
@@ -250,9 +263,9 @@ func (p *Parser) equality() (Expr, error) {
 	}
 
 	for p.match(l.NOT_EQUAL, l.EQUAL) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.comparison()
-		expr = Equality{expr, operator, right}
+		expr = Equality{expr, op, right}
 		if err != nil {
 			return expr, err
 		}
@@ -268,9 +281,9 @@ func (p *Parser) comparison() (Expr, error) {
 	}
 
 	for p.match(l.GREATER, l.GREATER_EQUAL, l.LESS, l.LESS_EQUAL) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.bitshift()
-		expr = Comparison{expr, operator, right}
+		expr = Comparison{expr, op, right}
 		if err != nil {
 			return expr, err
 		}
@@ -286,13 +299,13 @@ func (p *Parser) bitshift() (Expr, error) {
 	}
 
 	for p.match(l.SHIFT_LEFT, l.ROUNDSHIFT_LEFT, l.SHIFT_RIGHT, l.ROUNDSHIFT_RIGHT) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.bitwise()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Bitshift{expr, operator, right}
+		expr = Bitshift{expr, op, right}
 	}
 
 	return expr, nil
@@ -305,13 +318,13 @@ func (p *Parser) bitwise() (Expr, error) {
 	}
 
 	for p.match(l.AND_BITWISE, l.OR_BITWISE, l.XOR_BITWISE, l.NAND_BITWISE, l.NOR_BITWISE, l.XNOR_BITWISE) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.term()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Bitwise{expr, operator, right}
+		expr = Bitwise{expr, op, right}
 	}
 
 	return expr, nil
@@ -324,9 +337,9 @@ func (p *Parser) term() (Expr, error) {
 	}
 
 	for p.match(l.PLUS, l.MINUS) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.factor()
-		expr = Term{expr, operator, right}
+		expr = Term{expr, op, right}
 		if err != nil {
 			return expr, err
 		}
@@ -342,9 +355,9 @@ func (p *Parser) factor() (Expr, error) {
 	}
 
 	for p.match(l.STAR, l.SLASH, l.MOD) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.power()
-		expr = Factor{expr, operator, right}
+		expr = Factor{expr, op, right}
 		if err != nil {
 			return expr, err
 		}
@@ -360,13 +373,13 @@ func (p *Parser) power() (Expr, error) {
 	}
 
 	for p.match(l.POW) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.increment()
 		if err != nil {
 			return expr, err
 		}
 
-		expr = Power{Left: expr, Right: right, Operator: operator}
+		expr = Power{Left: expr, Right: right, Operator: op}
 	}
 
 	return expr, nil
@@ -374,9 +387,9 @@ func (p *Parser) power() (Expr, error) {
 
 func (p *Parser) increment() (Expr, error) {
 	if p.match(l.INCREMENT, l.DECREMENT) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.expression()
-		return Increment{Expression: right, Operator: operator, Position: false}, err
+		return Increment{Expression: right, Operator: op, Position: false}, err
 	}
 
 	expr, err := p.pointer()
@@ -385,8 +398,8 @@ func (p *Parser) increment() (Expr, error) {
 	}
 
 	if p.match(l.INCREMENT, l.DECREMENT) {
-		operator := p.previous()
-		expr = Increment{Expression: expr, Operator: operator, Position: true}
+		op := p.previous()
+		expr = Increment{Expression: expr, Operator: op, Position: true}
 	}
 
 	return expr, nil
@@ -394,9 +407,9 @@ func (p *Parser) increment() (Expr, error) {
 
 func (p *Parser) pointer() (Expr, error) {
 	if p.match(l.STAR, l.AND_BITWISE) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.pointer()
-		return Pointer{operator, right}, err
+		return Pointer{op, right}, err
 	}
 
 	return p.unary()
@@ -404,9 +417,9 @@ func (p *Parser) pointer() (Expr, error) {
 
 func (p *Parser) unary() (Expr, error) {
 	if p.match(l.BANG, l.NOT_BITWISE, l.PLUS, l.MINUS, l.GO_IN) {
-		operator := p.previous()
+		op := p.previous()
 		right, err := p.unary()
-		return Unary{operator, right}, err
+		return Unary{op, right}, err
 	}
 
 	return p.access()
@@ -419,9 +432,9 @@ func (p *Parser) access() (Expr, error) {
 	}
 
 	for p.match(l.CHECK_NAV, l.BANG_NAV, l.DOT, l.LEFT_BRACKET) {
-		operator := p.previous()
+		op := p.previous()
 
-		if operator.Type == l.LEFT_BRACKET {
+		if op.Type == l.LEFT_BRACKET {
 			right, err := p.expression()
 			if err != nil {
 				return expr, err
@@ -438,7 +451,7 @@ func (p *Parser) access() (Expr, error) {
 				return expr, err
 			}
 
-			expr = Access{Left: expr, Right: right, Operator: operator}
+			expr = Access{Left: expr, Right: right, Operator: op}
 		}
 
 	}
@@ -504,7 +517,7 @@ func (p *Parser) cast() (Expr, error) {
 	}
 
 	for p.match(l.COLON) {
-		operator := p.previous()
+		op := p.previous()
 		actual := p.current
 		right, err := p.primary()
 		if err != nil {
@@ -513,7 +526,7 @@ func (p *Parser) cast() (Expr, error) {
 
 		switch t := right.(type) {
 		case Type:
-			expr = Cast{Left: expr, TypeCast: t, Operator: operator}
+			expr = Cast{Left: expr, TypeCast: t, Operator: op}
 		default:
 			p.current = actual - 1
 			return expr, nil
@@ -623,7 +636,7 @@ func (p *Parser) block() (Expr, error) {
 	if p.match(l.LEFT_BRACE) {
 		/* 		if p.isLastToken() {
 			final := p.previous()
-			return nil, errutils.Error(final.Line, final.Column, final.Lexeme, errutils.UNTERMINATED_STATEMENT, "unterminated statement")
+			return nil, e.Error(final.Line, final.Column, final.Lexeme, e.UNTERMINATED_STATEMENT, "unterminated statement")
 		} */
 
 		expr, err := p.expression()
@@ -633,7 +646,7 @@ func (p *Parser) block() (Expr, error) {
 
 		/* if p.isLastToken() {
 			final := p.previous()
-			return nil, errutils.Error(final.Line, final.Column, final.Lexeme, errutils.UNTERMINATED_STATEMENT, "unterminated statement")
+			return nil, e.Error(final.Line, final.Column, final.Lexeme, e.UNTERMINATED_STATEMENT, "unterminated statement")
 		} */
 		if _, err := p.consume(l.RIGHT_BRACE); err != nil {
 			return expr, err
@@ -647,5 +660,5 @@ func (p *Parser) block() (Expr, error) {
 
 func (p *Parser) deadEnd() (Expr, error) {
 	token := p.tokens[p.current]
-	return nil, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect expression, found: %v", token))
+	return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expect expression, found: %v", token))
 }
