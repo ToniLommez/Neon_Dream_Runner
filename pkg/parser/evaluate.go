@@ -6,16 +6,18 @@ import (
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 )
 
-func (p *Program) Interpret(instructions []Stmt) (any, error) {
-	for _, i := range instructions {
-		if _, err := p.Main.evaluate(i); err != nil {
+func (s *Scope) Interpret() (any, error) {
+	var v any
+	var err error
+	for _, stmt := range s.Statements {
+		if v, err = s.evaluate(stmt); err != nil {
 			return nil, err
 		}
 	}
 
 	// p.Main.Values.Debug()
 
-	return nil, nil
+	return v, nil
 }
 
 func (s *Scope) evaluate(instruction any) (any, error) {
@@ -78,6 +80,8 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 		return nil, nil
 	case Grouping:
 		return s.evaluate(i.Expression)
+	case Block:
+		return s.BlockEval(i)
 	case nil:
 		return nil, e.Error(0, 0, "", e.RUNTIME, "nil instruction should not be found")
 	default:

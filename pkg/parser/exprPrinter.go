@@ -2,11 +2,11 @@ package parser
 
 import "fmt"
 
-func parenthesize(name string, exprs ...Expr) string {
+func parenthesize(name string, stmts ...Stmt) string {
 	parts := ""
 	parts += "(" + name
-	for _, e := range exprs {
-		parts += " " + e.String()
+	for _, e := range stmts {
+		parts += " " + fmt.Sprintf("%v", e)
 	}
 	parts += ")"
 
@@ -34,7 +34,7 @@ func (x Unary) String() string {
 }
 
 func (x Grouping) String() string {
-	return parenthesize("group ", x.Expression)
+	return parenthesize("group ", x)
 }
 
 func (x Sequence) String() string {
@@ -127,4 +127,12 @@ func (x Literal) String() string {
 
 func (x Type) String() string {
 	return fmt.Sprintf("(%v)", x.Name.Lexeme)
+}
+
+func (x Block) String() string {
+	str := ""
+	for i, s := range x.Scope.Statements {
+		str += fmt.Sprintf("(%d = %v)", i, s)
+	}
+	return str
 }

@@ -3,20 +3,21 @@ package parser
 import (
 	"fmt"
 
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 )
 
 func NewParser(tokens []l.Token) Parser {
 	return Parser{
-		tokens:  tokens,
-		current: 0,
+		Tokens:  tokens,
+		Current: 0,
+		Depth:   0,
 	}
 }
 
 func (p Parser) String() string {
 	s := ""
-	for _, t := range p.tokens {
+	for _, t := range p.Tokens {
 		s += fmt.Sprintf("%s ", t)
 		if t.Type == l.NEW_LINE {
 			s += "\n"
@@ -46,9 +47,13 @@ func (p *Parser) check(t l.TokenType) bool {
 
 func (p *Parser) advance() l.Token {
 	if !p.isLastToken() && !p.isAtEnd() {
-		p.current++
+		p.Current++
 	}
 	return p.previous()
+}
+
+func (p *Parser) hasMore() bool {
+	return !p.isLastToken() && !p.isAtEnd()
 }
 
 func (p *Parser) isAtEnd() bool {
@@ -56,23 +61,23 @@ func (p *Parser) isAtEnd() bool {
 }
 
 func (p *Parser) isLastToken() bool {
-	return len(p.tokens) <= p.current+1
+	return len(p.Tokens) <= p.Current+1
 }
 
 func (p *Parser) peek() l.Token {
-	return p.tokens[p.current]
+	return p.Tokens[p.Current]
 }
 
 func (p *Parser) peekN(n int) (bool, l.Token) {
-	if p.current+n < len(p.tokens) {
-		return true, p.tokens[p.current+n]
+	if p.Current+n < len(p.Tokens) {
+		return true, p.Tokens[p.Current+n]
 	} else {
-		return false, p.tokens[p.current]
+		return false, p.Tokens[p.Current]
 	}
 }
 
 func (p *Parser) previous() l.Token {
-	return p.tokens[p.current-1]
+	return p.Tokens[p.Current-1]
 }
 
 func (p *Parser) consume(expected l.TokenType) (l.Token, error) {
@@ -80,7 +85,18 @@ func (p *Parser) consume(expected l.TokenType) (l.Token, error) {
 		return p.advance(), nil
 	}
 	token := p.peek()
-	return token, errutils.Error(token.Line, token.Column, token.Lexeme, errutils.PARSER, fmt.Sprintf("expect %s", expected))
+	return token, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expect %s", expected))
+}
+
+// ensureNotUnterminated checks if the parser found an end and should have more after the new_line
+func (p *Parser) ensureNotUnterminated() error {
+	for p.peek().Type == l.NEW_LINE {
+		p.consume(l.NEW_LINE)
+		if !p.hasMore() {
+			return e.Error(0, 0, "", e.UNTERMINATED_STATEMENT, "")
+		}
+	}
+	return nil
 }
 
 func (p *Parser) Synchronize() {

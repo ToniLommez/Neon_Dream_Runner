@@ -32,7 +32,7 @@ func runFile(path string) error {
 	neon.Init(false)
 	neon.Text = strings.Split(string(content), "\n")
 
-	err = run(string(content), true, neon)
+	_, err = run(string(content), true, &neon)
 	if err != nil {
 		var fatal error
 		if myErr, ok := err.(e.NeonError); ok {
@@ -51,11 +51,18 @@ func runFile(path string) error {
 func runRepl() error {
 	s := bufio.NewScanner(os.Stdin)
 	var neon p.Program
+	var err error
 	neon.Init(true)
+
+	depth := 0
 	prompt := ""
 
 	for {
-		fmt.Print("> ")
+		if depth == 0 {
+			fmt.Print("\033[34m• \033[0m")
+		} else {
+			fmt.Print("\033[32m• \033[0m")
+		}
 
 		if s.Scan() {
 			prompt = s.Text()
@@ -66,7 +73,7 @@ func runRepl() error {
 			case "clear":
 				u.ClearScreen()
 			default:
-				err := run(prompt, false, neon)
+				depth, err = run(prompt, false, &neon)
 				if err != nil {
 					fatal := e.Deal(err, "")
 					if fatal != nil {
@@ -82,12 +89,12 @@ func runRepl() error {
 
 // TODO: transfer anything that belongs do "n" to a new package named neon and encapsulate everything
 // TODO: fork into runRepl and runFile
-func run(input string, isFile bool, neon p.Program) (err error) {
+func run(input string, isFile bool, neon *p.Program) (depth int, err error) {
 	// Scan new tokens
 	var ts []l.Token
 	s := l.NewScanner(input)
 	if ts, err = s.ScanTokens(isFile); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Concatenate with buffered tokens to parse
@@ -99,10 +106,10 @@ func run(input string, isFile bool, neon p.Program) (err error) {
 
 	// In REPL if a incomplete statemente is found, buffer it and wait till complete before evaluate
 	if !isFile && err != nil && (err.(e.NeonError)).ErrorType == e.UNTERMINATED_STATEMENT {
-		return nil
+		return pr.Depth, nil
 	} else if err != nil {
 		neon.TokensBuffer = nil
-		return err
+		return 0, err
 	}
 
 	// If correctly parsed save the statement
@@ -111,17 +118,19 @@ func run(input string, isFile bool, neon p.Program) (err error) {
 	neon.Main.Statements = statement
 
 	// Evaluate the AST
-	_, err = neon.Interpret(statement)
+	res, err := neon.Main.Interpret()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	// debug
-	/* for _, s := range statement {
-		fmt.Println(s)
-	} */
+	if res != nil {
+		tmp := fmt.Sprintf("%v", res)
+		color := "\033[38;2;150;240;240m"
+		reset := "\033[0m"
+		fmt.Printf("%s%v%s\n", color, strings.Replace(tmp, "\\n", "\n", -1), reset)
+	}
 
-	return nil
+	return 0, nil
 }
 
 func main() {

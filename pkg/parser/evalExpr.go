@@ -134,7 +134,7 @@ func (s *Scope) AssignEval(a Assign) (res any, err error) {
 		return
 	}
 
-	_, tv, d, err := s.Values.Get(a.Target)
+	_, tv, d, err := s.Get(a.Target)
 	if d {
 		if err != nil {
 			return
@@ -185,7 +185,7 @@ func (s *Scope) AssignEval(a Assign) (res any, err error) {
 		}
 	}
 
-	return s.Values.Set(a.Target, v)
+	return s.Set(a.Target, v)
 }
 
 func (s *Scope) TernaryEval(t Ternary) (any, error) {
@@ -862,7 +862,7 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 }
 
 func (s *Scope) IdentifierEval(i Identifier) (res any, err error) {
-	_, res, _, err = s.Values.Get(i.Name)
+	_, res, _, err = s.Get(i.Name)
 	if err != nil {
 		return nil, err
 	}

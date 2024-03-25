@@ -8,14 +8,19 @@ import (
 )
 
 type Parser struct {
-	tokens  []l.Token
-	current int
+	Tokens  []l.Token
+	Current int
+	Depth   int
 }
 
 func (p *Parser) Parse() ([]Stmt, error) {
 	stmt := make([]Stmt, 0)
 
 	for !p.isLastToken() && !p.isAtEnd() {
+		if p.peek().Type == l.NEW_LINE {
+			p.consume(l.NEW_LINE)
+		}
+
 		s, err := p.declaration()
 		if err != nil {
 			return stmt, err
@@ -75,9 +80,12 @@ func (p *Parser) letStatement() (Stmt, error) {
 		}
 	}
 
-	if _, err := p.consume(l.NEW_LINE); err != nil {
-		t := p.peek()
-		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after let statement")
+	// Bad smell, but it's working... So, it's a problem for the future when it broke the whole thing
+	if p.peek().Type != l.RIGHT_BRACE {
+		if _, err := p.consume(l.NEW_LINE); err != nil {
+			t := p.peek()
+			return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after let statement")
+		}
 	}
 
 	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Type: tokenToType(varType), Initializer: initializer}, nil
@@ -112,10 +120,12 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 		return expr, err
 	}
 
-	t, err := p.consume(l.NEW_LINE)
-	if err != nil {
-		t = p.peek()
-		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line before new expression")
+	if p.peek().Type != l.RIGHT_BRACE {
+		t, err := p.consume(l.NEW_LINE)
+		if err != nil {
+			t = p.peek()
+			return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line before new expression")
+		}
 	}
 
 	return ExprStmt{Expr: expr}, nil
@@ -518,7 +528,7 @@ func (p *Parser) cast() (Expr, error) {
 
 	for p.match(l.COLON) {
 		op := p.previous()
-		actual := p.current
+		actual := p.Current
 		right, err := p.primary()
 		if err != nil {
 			return expr, err
@@ -528,7 +538,7 @@ func (p *Parser) cast() (Expr, error) {
 		case Type:
 			expr = Cast{Left: expr, TypeCast: t, Operator: op}
 		default:
-			p.current = actual - 1
+			p.Current = actual - 1
 			return expr, nil
 		}
 	}
@@ -634,31 +644,41 @@ func (p *Parser) group() (Expr, error) {
 
 func (p *Parser) block() (Expr, error) {
 	if p.match(l.LEFT_BRACE) {
-		/* 		if p.isLastToken() {
-			final := p.previous()
-			return nil, e.Error(final.Line, final.Column, final.Lexeme, e.UNTERMINATED_STATEMENT, "unterminated statement")
-		} */
 
-		expr, err := p.expression()
-		if err != nil {
-			return expr, err
+		p.Depth++
+		if err := p.ensureNotUnterminated(); err != nil {
+			return nil, err
 		}
 
-		/* if p.isLastToken() {
-			final := p.previous()
-			return nil, e.Error(final.Line, final.Column, final.Lexeme, e.UNTERMINATED_STATEMENT, "unterminated statement")
-		} */
+		statements := make([]Stmt, 0)
+		for p.hasMore() && !p.check(l.RIGHT_BRACE) {
+			s, err := p.declaration()
+			if err != nil {
+				return nil, err
+			}
+
+			if err := p.ensureNotUnterminated(); err != nil {
+				return nil, err
+			}
+
+			statements = append(statements, s)
+		}
+
 		if _, err := p.consume(l.RIGHT_BRACE); err != nil {
-			return expr, err
+			return nil, err
 		}
+		p.Depth--
 
-		return Grouping{expr}, nil
+		var scope Scope
+		scope.Init()
+		scope.Statements = statements
+		return Block{Scope: scope}, nil
 	}
 
 	return p.deadEnd()
 }
 
 func (p *Parser) deadEnd() (Expr, error) {
-	token := p.tokens[p.current]
+	token := p.Tokens[p.Current]
 	return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expect expression, found: %v", token))
 }

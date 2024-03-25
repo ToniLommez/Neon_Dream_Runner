@@ -14,5 +14,5 @@ type Program struct {
 
 func (p *Program) Init(isLive bool) {
 	p.IsLive = isLive
-	p.Main.Values.Init()
+	p.Main.Init()
 }

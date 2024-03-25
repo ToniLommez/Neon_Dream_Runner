@@ -6,10 +6,8 @@ type Stmt interface {
 	// String() string
 }
 
-type Scope struct {
-	Statements []Stmt
-	Values     Environment
-	Previous   *Scope
+type Block struct {
+	Scope Scope
 }
 
 type ExprStmt struct {

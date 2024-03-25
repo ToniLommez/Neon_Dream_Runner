@@ -34,7 +34,8 @@ func (s *Scope) LetEval(l LetStmt) (any, error) {
 		}
 	}
 
-	return nil, s.Values.Define(l, value)
+	_, err = s.Define(l, value)
+	return nil, err
 }
 
 func (s *Scope) PutEval(p PutStmt) (any, error) {
@@ -44,14 +45,21 @@ func (s *Scope) PutEval(p PutStmt) (any, error) {
 	}
 
 	tmp := fmt.Sprintf("%v", expr)
-	fmt.Printf("%v", strings.Replace(tmp, "\\n", "\n", -1))
+	color := "\033[38;2;150;240;240m"
+	reset := "\033[0m"
+	fmt.Printf("%s%v%s", color, strings.Replace(tmp, "\\n", "\n", -1), reset)
 
 	// TODO: remove this after implement printf
 	fmt.Printf("\n")
 
-	return expr, nil
+	return nil, nil
 }
 
 func (s *Scope) ExprEval(e ExprStmt) (any, error) {
 	return s.evaluate(e.Expr)
+}
+
+func (s *Scope) BlockEval(b Block) (any, error) {
+	b.Scope.Parent = s
+	return b.Scope.Interpret()
 }
