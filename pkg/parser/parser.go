@@ -99,6 +99,40 @@ func (p *Parser) statement() (Stmt, error) {
 	return p.expressionStatement()
 }
 
+func (p *Parser) ifStatement() (Expr, error) {
+	var condition, thenBranch, elseBranch Expr
+	var err error
+
+	condition, err = p.expression()
+	if err != nil {
+		return condition, err
+	}
+
+	if err := p.ensureNotUnterminated(); err != nil {
+		return nil, err
+	}
+
+	// Should we add an optional p.consule(l.THEN) here?
+	// If so, just create the token in the lexer package...
+
+	if thenBranch, err = p.block(true); err != nil {
+		return nil, err
+	}
+
+	// the word if is consumed before the ifStatement is called,
+	// so, we consume the elif here, and then call recursively
+	if p.match(l.ELIF) {
+		elseBranch, err = p.ifStatement()
+	} else if p.match(l.ELSE) {
+		elseBranch, err = p.block(true)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return IfStmt{Condition: condition, Then: thenBranch, Else: elseBranch}, nil
+}
+
 func (p *Parser) putStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
@@ -114,6 +148,7 @@ func (p *Parser) putStatement() (Stmt, error) {
 	return PutStmt{Value: expr}, nil
 }
 
+// A state that contains an expression
 func (p *Parser) expressionStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
@@ -132,6 +167,15 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
+	return p.statementExpression()
+}
+
+// Statements that ARE expressions
+func (p *Parser) statementExpression() (Expr, error) {
+	if p.match(l.IF) {
+		return p.ifStatement()
+	}
+
 	return p.sequence()
 }
 
@@ -639,12 +683,11 @@ func (p *Parser) group() (Expr, error) {
 		return Grouping{expr}, nil
 	}
 
-	return p.block()
+	return p.block(false)
 }
 
-func (p *Parser) block() (Expr, error) {
+func (p *Parser) block(isRequired bool) (Expr, error) {
 	if p.match(l.LEFT_BRACE) {
-
 		p.Depth++
 		if err := p.ensureNotUnterminated(); err != nil {
 			return nil, err
@@ -673,6 +716,9 @@ func (p *Parser) block() (Expr, error) {
 		scope.Init()
 		scope.Statements = statements
 		return Block{Scope: scope}, nil
+	} else if isRequired {
+		token := p.Tokens[p.Current]
+		return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expected a block statement, found: %v", token))
 	}
 
 	return p.deadEnd()

@@ -5,7 +5,7 @@ import (
 )
 
 type Expr interface {
-	String() string
+	// String() string
 }
 
 type Sequence struct {

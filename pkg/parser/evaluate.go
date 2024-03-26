@@ -24,6 +24,8 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 	switch i := instruction.(type) {
 	case LetStmt:
 		return s.LetEval(i)
+	case IfStmt:
+		return s.IfStmt(i)
 	case PutStmt:
 		return s.PutEval(i)
 	case ExprStmt:

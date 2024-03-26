@@ -194,15 +194,23 @@ func (s *Scanner) scanToken() (err error) {
 
 	switch c {
 	case '/':
-		if s.match('/') {
+		if s.match('/') { // comentario
 			for s.peek() != '\n' && !s.isAtEnd() {
 				s.advance()
 			}
 		} else if s.match('*') {
+			// TODO: improve this, add line counter, actually only counting columns,
+			// and... this code is stinking, please get rid of this
 			for s.peekN(2) != "*/" && !s.isAtEnd() {
 				s.advance()
 			}
+			if s.isAtEnd() {
+				return errutils.Error(s.line, s.column, string(c), errutils.LEXER, "comment delimiter mismatch")
+			}
 			s.advance()
+			if s.isAtEnd() {
+				return errutils.Error(s.line, s.column, string(c), errutils.LEXER, "comment delimiter mismatch")
+			}
 			s.advance()
 		} else if s.match('=') {
 			s.addToken(DIV_ASSIGN, nil)

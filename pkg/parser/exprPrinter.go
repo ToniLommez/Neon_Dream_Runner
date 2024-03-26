@@ -136,3 +136,7 @@ func (x Block) String() string {
 	}
 	return str
 }
+
+func (x IfStmt) String() string {
+	return fmt.Sprintf("(if %v then %v else %v)", x.Condition, x.Then, x.Else)
+}

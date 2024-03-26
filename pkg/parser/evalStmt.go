@@ -7,7 +7,26 @@ import (
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 )
 
-// TODO: auto convert initializer type if let have a preset type
+func (s *Scope) IfStmt(i IfStmt) (any, error) {
+	test, err := s.evaluate(i.Condition)
+	if err != nil {
+		return nil, err
+	}
+
+	truthy, err := Truthy(test)
+	if err != nil {
+		return nil, err
+	}
+
+	if truthy {
+		return s.evaluate(i.Then)
+	} else if i.Else != nil {
+		return s.evaluate(i.Else)
+	}
+
+	return nil, nil
+}
+
 func (s *Scope) LetEval(l LetStmt) (any, error) {
 	var value any
 	var err error

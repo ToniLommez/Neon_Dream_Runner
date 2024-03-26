@@ -6,6 +6,15 @@ type Stmt interface {
 	// String() string
 }
 
+// All if/else statements need to have blocks, and all blocks are statements
+// so then/else have expressions, so if can act as ternary too
+// therefore if is actually an expression to regardless of the stmt in its name
+type IfStmt struct {
+	Condition Expr
+	Then      Expr
+	Else      Expr
+}
+
 type Block struct {
 	Scope Scope
 }
