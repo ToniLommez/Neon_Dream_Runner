@@ -81,7 +81,7 @@ func (p *Parser) letStatement() (Stmt, error) {
 	}
 
 	// Bad smell, but it's working... So, it's a problem for the future when it broke the whole thing
-	if p.peek().Type != l.RIGHT_BRACE {
+	if t := p.peek().Type; t != l.RIGHT_BRACE && t != l.SEMICOLON {
 		if _, err := p.consume(l.NEW_LINE); err != nil {
 			t := p.peek()
 			return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after let statement")
@@ -92,8 +92,12 @@ func (p *Parser) letStatement() (Stmt, error) {
 }
 
 func (p *Parser) statement() (Stmt, error) {
-	if p.match(l.PUT) {
+	if p.match(l.FOR) {
+		return p.forStatement()
+	} else if p.match(l.PUT) {
 		return p.putStatement()
+	} else if p.match(l.WHILE) {
+		return p.whileStatement()
 	}
 
 	return p.expressionStatement()
@@ -133,19 +137,102 @@ func (p *Parser) ifStatement() (Expr, error) {
 	return IfStmt{Condition: condition, Then: thenBranch, Else: elseBranch}, nil
 }
 
+func (p *Parser) forStatement() (Stmt, error) {
+	var condition, increment, body Expr
+	var initializer Stmt
+	var err error
+
+	// Declaration
+	if p.match(l.LET) {
+		initializer, err = p.letStatement()
+	} else if p.peek().Type != l.SEMICOLON {
+		initializer, err = p.expressionStatement()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if _, err = p.consume(l.SEMICOLON); err != nil {
+		return nil, err
+	}
+
+	// Condition
+	if !p.check(l.SEMICOLON) {
+		if condition, err = p.expression(); err != nil {
+			return nil, err
+		}
+	}
+	if _, err = p.consume(l.SEMICOLON); err != nil {
+		return nil, err
+	}
+
+	// Increment
+	if !p.check(l.SEMICOLON) {
+		if increment, err = p.expression(); err != nil {
+			return nil, err
+		}
+	}
+
+	if body, err = p.block(true); err != nil {
+		return nil, err
+	}
+
+	if increment != nil {
+		s := (body.(Block))
+		s.Scope.Statements = append(s.Scope.Statements, increment)
+		body = s
+	}
+
+	if condition == nil {
+		condition = Literal{true}
+	}
+
+	body = WhileStmt{Condition: condition, Body: body}
+
+	if initializer != nil {
+		var scope Scope
+		scope.Init()
+		scope.Statements = []Stmt{initializer, body}
+		body = Block{Scope: scope}
+	}
+
+	return body, nil
+}
+
 func (p *Parser) putStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return expr, err
 	}
 
-	t, err := p.consume(l.NEW_LINE)
+	if p.peek().Type == l.NEW_LINE {
+		p.advance()
+	}
+
+	/* t, err := p.consume(l.NEW_LINE)
 	if err != nil {
 		t = p.peek()
 		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after print")
-	}
+	} */
 
 	return PutStmt{Value: expr}, nil
+}
+
+func (p *Parser) whileStatement() (Stmt, error) {
+	var expr, body Expr
+	var err error
+
+	if expr, err = p.expression(); err != nil {
+		return nil, err
+	}
+	if err = p.ensureNotUnterminated(); err != nil {
+		return nil, err
+	}
+
+	if body, err = p.block(true); err != nil {
+		return nil, err
+	}
+
+	return WhileStmt{Condition: expr, Body: body}, nil
 }
 
 // A state that contains an expression
@@ -155,7 +242,7 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 		return expr, err
 	}
 
-	if p.peek().Type != l.RIGHT_BRACE {
+	if t := p.peek().Type; t != l.RIGHT_BRACE && t != l.SEMICOLON {
 		t, err := p.consume(l.NEW_LINE)
 		if err != nil {
 			t = p.peek()
@@ -171,6 +258,7 @@ func (p *Parser) expression() (Expr, error) {
 }
 
 // Statements that ARE expressions
+// TODO: put blockStatement here
 func (p *Parser) statementExpression() (Expr, error) {
 	if p.match(l.IF) {
 		return p.ifStatement()
@@ -185,7 +273,7 @@ func (p *Parser) sequence() (Expr, error) {
 		return expr, err
 	}
 
-	for p.match(l.SEMICOLON) {
+	for p.match(l.COMMA) {
 		right, err := p.assign()
 		if err != nil {
 			return expr, err

@@ -74,6 +74,35 @@ func (s *Scope) PutEval(p PutStmt) (any, error) {
 	return nil, nil
 }
 
+func (s *Scope) WhileEval(w WhileStmt) (any, error) {
+	var err error
+	var c any  // Raw condition
+	var b bool // Truthy(Raw condition)
+	var i int
+
+	for {
+		if c, err = s.evaluate(w.Condition); err != nil {
+			return nil, err
+		}
+
+		if b, err = Truthy(c); err != nil {
+			return nil, err
+		}
+
+		if !b {
+			break
+		}
+
+		if _, err = s.evaluate(w.Body); err != nil {
+			return nil, err
+		}
+
+		i++
+	}
+
+	return nil, nil
+}
+
 func (s *Scope) ExprEval(e ExprStmt) (any, error) {
 	return s.evaluate(e.Expr)
 }

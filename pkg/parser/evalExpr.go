@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 	"github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
@@ -104,6 +104,8 @@ func Truthy(value any) (r bool, err error) {
 		r = false
 	case bool:
 		r = v
+	case rune:
+		r = v != 0
 	case int:
 		r = v != 0
 	case uint:
@@ -114,7 +116,7 @@ func Truthy(value any) (r bool, err error) {
 		r = v != ""
 	default:
 		r = false
-		err = errutils.Error(-1, -1, "", errutils.RUNTIME, "truthy pattern matching not implemented, returning false")
+		err = e.Error(-1, -1, "", e.RUNTIME, "truthy pattern matching not implemented, returning false")
 	}
 
 	return
@@ -206,75 +208,58 @@ func (s *Scope) TernaryEval(t Ternary) (any, error) {
 	}
 }
 
-func (s *Scope) LogicEval(x Logic) (res any, err error) {
-	l, err := s.evaluate(x.Left)
-	if err != nil {
-		return
+func (s *Scope) LogicEval(x Logic) (any, error) {
+	var left bool
+	var err error
+	var tmp any
+
+	if tmp, err = s.evaluate(x.Left); err != nil {
+		return nil, err
+	}
+	if left, err = Truthy(tmp); err != nil {
+		return nil, err
 	}
 
-	r, err := s.evaluate(x.Right)
-	if err != nil {
-		return
-	}
-
-	l, r, precedence := typePrecedence(l, r, false)
-	if precedence == UNKNOWN {
-		err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
-	}
-
-	switch x.Operator.Type {
-	case lexer.OR_LOGIC:
-		switch precedence {
-		case BOOL:
-			res = l.(bool) || r.(bool)
-		case UINT:
-			res = (l.(uint) > 0) || (r.(uint) > 0)
-		case INT:
-			res = (l.(int) > 0) || (r.(int) > 0)
-		case FLOAT:
-			res = (l.(float64) > 0) || (r.(float64) > 0)
-		case STRING:
-			err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "cannot use string as logic value")
+	if x.Operator.Type == lexer.AND_LOGIC {
+		if !left {
+			return false, nil
 		}
-	case lexer.AND_LOGIC:
-		switch precedence {
-		case BOOL:
-			res = l.(bool) && r.(bool)
-		case UINT:
-			res = (l.(uint) > 0) && (r.(uint) > 0)
-		case INT:
-			res = (l.(int) > 0) && (r.(int) > 0)
-		case FLOAT:
-			res = (l.(float64) > 0) && (r.(float64) > 0)
-		case STRING:
-			err = errutils.Error(x.Operator.Line, x.Operator.Column, x.Operator.Lexeme, errutils.RUNTIME, "cannot use string as logic value")
+	} else {
+		if left {
+			return true, nil
 		}
 	}
 
-	return
+	if tmp, err = s.evaluate(x.Right); err != nil {
+		return nil, err
+	}
+
+	return Truthy(tmp)
 }
 
-func (s *Scope) EqualityEval(e Equality) (res any, err error) {
-	l, err := s.evaluate(e.Left)
+func (s *Scope) EqualityEval(eq Equality) (res any, err error) {
+	l, err := s.evaluate(eq.Left)
 	if err != nil {
 		return
 	}
 
-	r, err := s.evaluate(e.Right)
+	r, err := s.evaluate(eq.Right)
 	if err != nil {
 		return
 	}
 
 	l, r, precedence := typePrecedence(l, r, true)
 	if precedence == UNKNOWN {
-		err = errutils.Error(e.Operator.Line, e.Operator.Column, e.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+		err = e.Error(eq.Operator.Line, eq.Operator.Column, eq.Operator.Lexeme, e.RUNTIME, "invalid operands")
 	}
 
-	switch e.Operator.Type {
+	switch eq.Operator.Type {
 	case lexer.EQUAL:
 		switch precedence {
 		case BOOL:
 			res = l.(bool) == r.(bool)
+		case CHAR:
+			res = l.(rune) == r.(rune)
 		case UINT:
 			res = l.(uint) == r.(uint)
 		case INT:
@@ -288,6 +273,8 @@ func (s *Scope) EqualityEval(e Equality) (res any, err error) {
 		switch precedence {
 		case BOOL:
 			res = l.(bool) != r.(bool)
+		case CHAR:
+			res = l.(rune) != r.(rune)
 		case UINT:
 			res = l.(uint) != r.(uint)
 		case INT:
@@ -315,7 +302,7 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 
 	l, r, precedence := typePrecedence(l, r, true)
 	if precedence == UNKNOWN {
-		err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+		err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "invalid operands")
 	}
 
 	switch c.Operator.Type {
@@ -323,6 +310,8 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 		switch precedence {
 		case BOOL:
 			res = boolToInt(l.(bool)) >= boolToInt(r.(bool))
+		case CHAR:
+			res = l.(rune) >= r.(rune)
 		case UINT:
 			res = l.(uint) >= r.(uint)
 		case INT:
@@ -330,12 +319,14 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) >= r.(float64)
 		case STRING:
-			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+			err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot direct compare strings")
 		}
 	case lexer.LESS_EQUAL:
 		switch precedence {
 		case BOOL:
 			res = boolToInt(l.(bool)) <= boolToInt(r.(bool))
+		case CHAR:
+			res = l.(rune) <= r.(rune)
 		case UINT:
 			res = l.(uint) <= r.(uint)
 		case INT:
@@ -343,12 +334,14 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) <= r.(float64)
 		case STRING:
-			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+			err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot direct compare strings")
 		}
 	case lexer.GREATER:
 		switch precedence {
 		case BOOL:
 			res = boolToInt(l.(bool)) > boolToInt(r.(bool))
+		case CHAR:
+			res = l.(rune) > r.(rune)
 		case UINT:
 			res = l.(uint) > r.(uint)
 		case INT:
@@ -356,12 +349,14 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) > r.(float64)
 		case STRING:
-			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+			err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot direct compare strings")
 		}
 	case lexer.LESS:
 		switch precedence {
 		case BOOL:
 			res = boolToInt(l.(bool)) < boolToInt(r.(bool))
+		case CHAR:
+			res = l.(rune) < r.(rune)
 		case UINT:
 			res = l.(uint) < r.(uint)
 		case INT:
@@ -369,7 +364,7 @@ func (s *Scope) ComparisonEval(c Comparison) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) < r.(float64)
 		case STRING:
-			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot direct compare strings")
+			err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot direct compare strings")
 		}
 	}
 
@@ -388,61 +383,61 @@ func (s *Scope) BitshiftEval(b Bitshift) (res any, err error) {
 	}
 
 	if _, _, precedence := typePrecedence(l, r, true); precedence == UNKNOWN {
-		err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+		err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "invalid operands")
 	}
 
 	switch b.Operator.Type {
 	case lexer.SHIFT_LEFT:
 		switch getType(l) {
 		case BOOL:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift bool")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift bool")
 		case INT:
 			res = l.(int) << toUint(r)
 		case UINT:
 			res = l.(uint) << toUint(r)
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift strings")
 		}
 	case lexer.ROUNDSHIFT_LEFT:
 		switch getType(l) {
 		case BOOL:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift bool")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift bool")
 		case INT:
 			res = RotateLeftInt(l.(int), toUint(r))
 		case UINT:
 			res = RotateLeftUint(l.(uint), toUint(r))
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift strings")
 		}
 	case lexer.SHIFT_RIGHT:
 		switch getType(l) {
 		case BOOL:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift bool")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift bool")
 		case INT:
 			res = l.(int) >> toUint(r)
 		case UINT:
 			res = l.(uint) >> toUint(r)
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitshift strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitshift strings")
 		}
 	case lexer.ROUNDSHIFT_RIGHT:
 		switch getType(l) {
 		case BOOL:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift bool")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift bool")
 		case INT:
 			res = RotateRightInt(l.(int), toUint(r))
 		case UINT:
 			res = RotateRightUint(l.(uint), toUint(r))
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot roundshift strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot roundshift strings")
 		}
 	}
 
@@ -462,7 +457,7 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 
 	l, r, precedence := typePrecedence(l, r, false)
 	if precedence == UNKNOWN {
-		err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "invalid operands")
+		err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "invalid operands")
 	}
 
 	switch b.Operator.Type {
@@ -475,9 +470,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = l.(int) & r.(int)
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	case lexer.OR_BITWISE:
 		switch precedence {
@@ -488,9 +483,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = l.(int) | r.(int)
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	case lexer.XOR_BITWISE:
 		switch precedence {
@@ -501,9 +496,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = l.(int) ^ r.(int)
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	case lexer.NAND_BITWISE:
 		switch precedence {
@@ -514,9 +509,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = ^(l.(int) & r.(int))
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	case lexer.NOR_BITWISE:
 		switch precedence {
@@ -527,9 +522,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = ^(l.(int) | r.(int))
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	case lexer.XNOR_BITWISE:
 		switch precedence {
@@ -540,9 +535,9 @@ func (s *Scope) BitwiseEval(b Bitwise) (res any, err error) {
 		case INT:
 			res = ^(l.(int) ^ r.(int))
 		case FLOAT:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise float")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise float")
 		case STRING:
-			err = errutils.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, errutils.RUNTIME, "cannot bitwise strings")
+			err = e.Error(b.Operator.Line, b.Operator.Column, b.Operator.Lexeme, e.RUNTIME, "cannot bitwise strings")
 		}
 	}
 
@@ -562,14 +557,14 @@ func (s *Scope) TermEval(t Term) (res any, err error) {
 
 	l, r, precedence := typePrecedence(l, r, false)
 	if precedence == UNKNOWN {
-		err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot convert operands")
+		err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot convert operands")
 	}
 
 	switch t.Operator.Type {
 	case lexer.PLUS:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot sum bool values")
 		case CHAR:
 			res = string(l.(rune)) + string(r.(rune))
 		case UINT:
@@ -584,7 +579,7 @@ func (s *Scope) TermEval(t Term) (res any, err error) {
 	case lexer.MINUS:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot sum bool values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot sum bool values")
 		case UINT:
 			res = l.(uint) - r.(uint)
 		case INT:
@@ -592,7 +587,7 @@ func (s *Scope) TermEval(t Term) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) - r.(float64)
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot subtract strings")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot subtract strings")
 		}
 	}
 
@@ -612,14 +607,14 @@ func (s *Scope) FactorEval(t Factor) (res any, err error) {
 
 	l, r, precedence := typePrecedence(l, r, false)
 	if precedence == UNKNOWN {
-		err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot implicit convert operands")
+		err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot implicit convert operands")
 	}
 
 	switch t.Operator.Type {
 	case lexer.STAR:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot multiply bool values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot multiply bool values")
 		case UINT:
 			res = l.(uint) * r.(uint)
 		case INT:
@@ -627,45 +622,45 @@ func (s *Scope) FactorEval(t Factor) (res any, err error) {
 		case FLOAT:
 			res = l.(float64) * r.(float64)
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot multiply string values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot multiply string values")
 		}
 	case lexer.SLASH:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot divide bool values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot divide bool values")
 		case UINT:
 			if r.(uint) == 0 {
-				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+				err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "division by zero")
 			} else {
 				res = l.(uint) / r.(uint)
 			}
 		case INT:
 			if r.(int) == 0 {
-				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+				err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "division by zero")
 			} else {
 				res = l.(int) / r.(int)
 			}
 		case FLOAT:
 			if r.(float64) == 0 {
-				err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "division by zero")
+				err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "division by zero")
 			} else {
 				res = l.(float64) / r.(float64)
 			}
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot divide strings")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot divide strings")
 		}
 	case lexer.MOD:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod bool values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot mod bool values")
 		case UINT:
 			res = l.(uint) % r.(uint)
 		case INT:
 			res = l.(int) % r.(int)
 		case FLOAT:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod float values")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot mod float values")
 		case STRING:
-			err = errutils.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, errutils.RUNTIME, "cannot mod strings")
+			err = e.Error(t.Operator.Line, t.Operator.Column, t.Operator.Lexeme, e.RUNTIME, "cannot mod strings")
 		}
 	}
 
@@ -685,14 +680,14 @@ func (s *Scope) PowerEval(p Power) (res any, err error) {
 
 	l, r, precedence := typePrecedence(l, r, false)
 	if precedence == UNKNOWN {
-		err = errutils.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, errutils.RUNTIME, "cannot implicit convert operands")
+		err = e.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, e.RUNTIME, "cannot implicit convert operands")
 	}
 
 	switch p.Operator.Type {
 	case lexer.POW:
 		switch precedence {
 		case BOOL:
-			err = errutils.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, errutils.RUNTIME, "cannot power bool values")
+			err = e.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, e.RUNTIME, "cannot power bool values")
 		case UINT:
 			res = uint(math.Pow(float64(l.(uint)), float64(r.(uint))))
 		case INT:
@@ -700,7 +695,7 @@ func (s *Scope) PowerEval(p Power) (res any, err error) {
 		case FLOAT:
 			res = math.Pow(l.(float64), r.(float64))
 		case STRING:
-			err = errutils.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, errutils.RUNTIME, "cannot power string values")
+			err = e.Error(p.Operator.Line, p.Operator.Column, p.Operator.Lexeme, e.RUNTIME, "cannot power string values")
 		}
 	}
 
@@ -726,9 +721,9 @@ func (s *Scope) UnaryEval(u Unary) (res any, err error) {
 		case FLOAT:
 			res = utils.Ternary(v.(float64) == 0, true, false)
 		case STRING:
-			err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, fmt.Sprintf("expect number after !, received string: \"%v\"", v))
+			err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, fmt.Sprintf("expect number after !, received string: \"%v\"", v))
 		default:
-			err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, fmt.Sprintf("expect number after !, received: %v", v))
+			err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, fmt.Sprintf("expect number after !, received: %v", v))
 		}
 	case lexer.NOT_BITWISE:
 		switch t {
@@ -737,9 +732,9 @@ func (s *Scope) UnaryEval(u Unary) (res any, err error) {
 		case BOOL:
 			res = !v.(bool)
 		case FLOAT:
-			err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "operator ~ not defined on float")
+			err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "operator ~ not defined on float")
 		default:
-			return nil, errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "expect number after ~")
+			return nil, e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "expect number after ~")
 		}
 	case lexer.PLUS:
 		res = v
@@ -748,16 +743,16 @@ func (s *Scope) UnaryEval(u Unary) (res any, err error) {
 		case INT:
 			res = -v.(int)
 		case BOOL:
-			err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "operator - not defined on bool")
+			err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "operator - not defined on bool")
 		case FLOAT:
 			res = -v.(float64)
 		default:
-			return nil, errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "expect number after ~")
+			return nil, e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "expect number after ~")
 		}
 	case lexer.GO_IN:
-		err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "parallelism not yet implemented")
+		err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "parallelism not yet implemented")
 	default:
-		err = errutils.Error(o.Line, o.Column, o.Lexeme, errutils.RUNTIME, "unknown operator")
+		err = e.Error(o.Line, o.Column, o.Lexeme, e.RUNTIME, "unknown operator")
 	}
 
 	return res, err
@@ -790,7 +785,7 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 			case STRING:
 				res = len(l.(string)) == 0
 			default:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot convert type to bool")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot convert type to bool")
 			}
 		case lexer.INT:
 			switch getType(l) {
@@ -803,9 +798,9 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 			case FLOAT:
 				res = int(l.(float64))
 			case STRING:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot conver string to int")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot conver string to int")
 			default:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot convert type to int")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot convert type to int")
 			}
 		case lexer.UINT:
 			switch getType(l) {
@@ -818,9 +813,9 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 			case FLOAT:
 				res = uint(l.(float64))
 			case STRING:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot conver string to uint")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot conver string to uint")
 			default:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot convert type to uint")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot convert type to uint")
 			}
 		case lexer.FLOAT:
 			switch getType(l) {
@@ -833,14 +828,16 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 			case FLOAT:
 				res = l
 			case STRING:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot conver string to float")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot conver string to float")
 			default:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot convert type to float")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot convert type to float")
 			}
 		case lexer.STRING:
 			switch getType(l) {
 			case BOOL:
 				res = utils.Ternary(l.(bool), "true", "false")
+			case CHAR:
+				res = string(l.(rune))
 			default:
 				res = fmt.Sprintf("%v", l)
 			}
@@ -848,14 +845,16 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 			switch getType(l) {
 			case INT:
 				res = rune(l.(int))
+			case STRING:
+				res = rune(l.(string)[0])
 			default:
-				err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "???????????????")
+				err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "???????????????")
 			}
 		default:
-			err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "cannot convert to type")
+			err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "cannot convert to type")
 		}
 	default:
-		err = errutils.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, errutils.RUNTIME, "type of typecast not found")
+		err = e.Error(c.Operator.Line, c.Operator.Column, c.Operator.Lexeme, e.RUNTIME, "type of typecast not found")
 	}
 
 	return res, err

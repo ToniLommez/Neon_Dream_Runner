@@ -6,9 +6,14 @@ type Stmt interface {
 	// String() string
 }
 
-// All if/else statements need to have blocks, and all blocks are statements
-// so then/else have expressions, so if can act as ternary too
-// therefore if is actually an expression to regardless of the stmt in its name
+type WhileStmt struct {
+	Condition Expr
+	Body      Expr
+}
+
+// All `if/else` statements need to have blocks, and all blocks are statements
+// so then/else have expressions, so `if` can act as a ternary too
+// therefore `if` is actually an expression, regardless of the stmt in its name
 type IfStmt struct {
 	Condition Expr
 	Then      Expr

@@ -28,6 +28,8 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 		return s.IfStmt(i)
 	case PutStmt:
 		return s.PutEval(i)
+	case WhileStmt:
+		return s.WhileEval(i)
 	case ExprStmt:
 		return s.ExprEval(i)
 	case Sequence:
