@@ -44,7 +44,86 @@ func (p *Parser) declaration() (Stmt, error) {
 		return s, err
 	}
 
+	if p.match(l.FN) {
+		s, err := p.function()
+
+		if err != nil {
+			// TODO: change to a synchronize proper to function
+			p.Synchronize()
+			return s, err
+		}
+
+		return s, err
+	}
+
 	return p.statement()
+}
+
+func (p *Parser) function() (Stmt, error) {
+	var name l.Token
+	var args []LetStmt
+	var rets []int
+	var err error
+	var block Expr
+
+	// Function name
+	name, err = p.consume(l.IDENTIFIER)
+	if err != nil {
+		return nil, err
+	}
+
+	// Args
+	if p.match(l.LEFT_PAREN) {
+		for {
+			var varName, varType l.Token
+
+			if varName, err = p.consume(l.IDENTIFIER); err != nil {
+				return nil, err
+			}
+
+			if _, err = p.consume(l.COLON); err != nil {
+				return nil, err
+			}
+
+			varType = p.advance()
+			if !varType.Type.IsValidType() {
+				return nil, e.Error(varType.Line, varType.Column, varType.Lexeme, e.PARSER, "expect type")
+			}
+
+			// TODO: add mutability, nullability and etc
+			args = append(args, LetStmt{Name: varName, Mutable: true, Nullable: true, Type: tokenToType(varType), Initializer: nil})
+
+			if !p.match(l.COMMA) {
+				break
+			}
+		}
+
+		if _, err = p.consume(l.RIGHT_PAREN); err != nil {
+			return nil, err
+		}
+	}
+
+	// Return types
+	if p.match(l.RETURN) {
+		for {
+			varType := p.advance()
+			if !varType.Type.IsValidType() {
+				return nil, e.Error(varType.Line, varType.Column, varType.Lexeme, e.PARSER, "expect type")
+			}
+
+			rets = append(rets, tokenToType(varType))
+
+			if !p.match(l.COMMA) {
+				break
+			}
+		}
+	}
+
+	if block, err = p.block(true); err != nil {
+		return nil, err
+	}
+
+	return FnStmt{Name: name, Args: args, Return: rets, Context: block.(Block).Scope}, nil
 }
 
 func (p *Parser) letStatement() (Stmt, error) {
@@ -653,7 +732,7 @@ func (p *Parser) catch() (Expr, error) {
 }
 
 func (p *Parser) cast() (Expr, error) {
-	expr, err := p.primary()
+	expr, err := p.identifier(true)
 	if err != nil {
 		return expr, err
 	}
@@ -661,7 +740,7 @@ func (p *Parser) cast() (Expr, error) {
 	for p.match(l.COLON) {
 		op := p.previous()
 		actual := p.Current
-		right, err := p.primary()
+		right, err := p.identifier(true)
 		if err != nil {
 			return expr, err
 		}
@@ -678,10 +757,41 @@ func (p *Parser) cast() (Expr, error) {
 	return expr, nil
 }
 
-func (p *Parser) primary() (Expr, error) {
+func (p *Parser) identifier(couldBeFunction bool) (Expr, error) {
 	if p.match(l.IDENTIFIER) {
-		return Identifier{p.previous()}, nil
+		id := p.previous()
+		args := []Expr{}
+
+		if couldBeFunction {
+			// if it has other identifiers after, it is a caller
+			// otherwise just a normal identifier
+			for {
+				expr, err := p.identifier(false)
+				// In this case is not an error, just ended the function arguments
+				// Error driven architecture, sorry...
+				if err != nil {
+					if (err.(e.NeonError)).ErrorType == e.PARSER_DEAD_END {
+						break
+					} else {
+						return nil, err
+					}
+				}
+
+				args = append(args, expr)
+			}
+		}
+
+		if len(args) == 0 {
+			return Identifier{id}, nil
+		} else {
+			return Caller{Name: id, Args: args}, nil
+		}
 	}
+
+	return p.primary()
+}
+
+func (p *Parser) primary() (Expr, error) {
 	if p.match(l.STRING_LITERAL, l.NUMBER_LITERAL, l.FLOAT_LITERAL) {
 		return Literal{p.previous().Literal}, nil
 	}
@@ -694,11 +804,21 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(l.NIL) {
 		return Literal{nil}, nil
 	}
+
+	return p.typeName(false)
+}
+
+func (p *Parser) typeName(onlyType bool) (Expr, error) {
 	if p.match(l.INT, l.I8, l.I16, l.I32, l.I64, l.UINT, l.U8, l.U16, l.U32, l.U64, l.FLOAT, l.F32, l.F64, l.BOOL, l.CHAR, l.STRING, l.BYTE, l.ANY) {
 		return Type{Name: p.previous()}, nil
 	}
 
-	return p.mapLiteral()
+	if onlyType {
+		token := p.peek()
+		return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expected a type: %v", token))
+	} else {
+		return p.mapLiteral()
+	}
 }
 
 func (p *Parser) mapLiteral() (Expr, error) {
@@ -805,7 +925,7 @@ func (p *Parser) block(isRequired bool) (Expr, error) {
 		scope.Statements = statements
 		return Block{Scope: scope}, nil
 	} else if isRequired {
-		token := p.Tokens[p.Current]
+		token := p.peek()
 		return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expected a block statement, found: %v", token))
 	}
 
@@ -814,5 +934,5 @@ func (p *Parser) block(isRequired bool) (Expr, error) {
 
 func (p *Parser) deadEnd() (Expr, error) {
 	token := p.Tokens[p.Current]
-	return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expect expression, found: %v", token))
+	return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER_DEAD_END, fmt.Sprintf("expect expression, found: %v", token))
 }

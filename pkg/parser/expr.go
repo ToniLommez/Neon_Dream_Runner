@@ -130,6 +130,11 @@ type Cast struct {
 	TypeCast Expr
 }
 
+type Caller struct {
+	Name l.Token
+	Args []Expr
+}
+
 type Identifier struct {
 	Name l.Token
 }

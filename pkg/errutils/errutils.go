@@ -10,7 +10,10 @@ const (
 	LEXER                  = "lexer"
 	PARSER                 = "parser"
 	RUNTIME                = "runtime"
-	UNTERMINATED_STATEMENT = "unterminated_statement"
+	UNTERMINATED_STATEMENT = "unterminated statement"
+	PARSER_DEAD_END        = "parser dead end"
+	VARIABLE_NOT_FOUND     = "variable not found"
+	FUNCTION_NOT_FOUND     = "function not found"
 )
 
 type NeonError struct {

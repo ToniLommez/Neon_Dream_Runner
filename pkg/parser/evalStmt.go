@@ -5,9 +5,42 @@ import (
 	"strings"
 
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
+	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
 )
 
-func (s *Scope) IfStmt(i IfStmt) (any, error) {
+func (s *Scope) FnEval(f FnStmt) (any, error) {
+	var err error
+	args := make([]Stmt, len(f.Args))
+	for i, fnArg := range f.Args {
+		var literal any
+		if literal, err = s.evaluate(fnArg.Initializer); err != nil {
+			return nil, err
+		}
+		fnArg.Initializer = Literal{Value: literal}
+		args[i] = fnArg
+	}
+	f.Context.Statements = append(args, f.Context.Statements...)
+
+	res, err := f.Context.Interpret()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(f.Return) == 0 {
+		return nil, nil
+	}
+
+	// Creating the type cast of the result
+	tokenType := l.TokenType(typeToString(f.Return[0]))
+	token := l.Token{Type: tokenType}
+	typeCast := Type{Name: token}
+	result := Literal{Value: res}
+	x := Cast{Left: result, TypeCast: typeCast}
+
+	return s.evaluate(x)
+}
+
+func (s *Scope) IfEval(i IfStmt) (any, error) {
 	test, err := s.evaluate(i.Condition)
 	if err != nil {
 		return nil, err
@@ -69,7 +102,7 @@ func (s *Scope) PutEval(p PutStmt) (any, error) {
 	fmt.Printf("%s%v%s", color, strings.Replace(tmp, "\\n", "\n", -1), reset)
 
 	// TODO: remove this after implement printf
-	fmt.Printf("\n")
+	// fmt.Printf("\n")
 
 	return nil, nil
 }
@@ -109,5 +142,6 @@ func (s *Scope) ExprEval(e ExprStmt) (any, error) {
 
 func (s *Scope) BlockEval(b Block) (any, error) {
 	b.Scope.Parent = s
+	b.Scope.Owner = s.Owner
 	return b.Scope.Interpret()
 }

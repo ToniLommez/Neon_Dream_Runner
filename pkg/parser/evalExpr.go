@@ -860,11 +860,38 @@ func (s *Scope) CastEval(c Cast) (res any, err error) {
 	return res, err
 }
 
-func (s *Scope) IdentifierEval(i Identifier) (res any, err error) {
+func (s *Scope) IdentifierEval(i Identifier) (any, error) {
+	var res any
+	var err error
 	_, res, _, err = s.Get(i.Name)
+	if err != nil {
+		if err.(e.NeonError).ErrorType != e.VARIABLE_NOT_FOUND {
+			return nil, err
+		} else {
+			return s.evaluate(Caller{Name: i.Name, Args: []Expr{}})
+		}
+	}
+
+	return res, nil
+}
+
+func (s *Scope) CallerEval(c Caller) (any, error) {
+	fn, err := s.GetFunction(c.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	return
+	functionArgs := len(fn.Args)
+	passedArgs := len(c.Args)
+
+	if functionArgs != passedArgs {
+		lastArg := fn.Args[functionArgs-1].Name
+		return nil, e.Error(lastArg.Line, lastArg.Column, lastArg.Lexeme, e.RUNTIME, "invalid number of arguments")
+	}
+
+	for i := range fn.Args {
+		fn.Args[i].Initializer = c.Args[i]
+	}
+
+	return s.FnEval(fn)
 }

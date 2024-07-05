@@ -6,6 +6,14 @@ type Stmt interface {
 	// String() string
 }
 
+// Functions
+type FnStmt struct {
+	Name    lexer.Token
+	Args    []LetStmt
+	Return  []int
+	Context Scope
+}
+
 type WhileStmt struct {
 	Condition Expr
 	Body      Expr

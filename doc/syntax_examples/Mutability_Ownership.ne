@@ -15,6 +15,7 @@ fn foo(x int) => int {
 
 // Variavel global em função
 let greeting = "Hello"
+
 // A variavel sera enviada como copia, utilizando as mesmas regras de mutabilidade
 fn greet(name string) => string {
     return "{} {}!", greeting, name

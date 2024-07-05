@@ -27,6 +27,7 @@ func (p Parser) String() string {
 	return s
 }
 
+// match consume a token if it matchs
 func (p *Parser) match(types ...l.TokenType) bool {
 	for _, t := range types {
 		if p.check(t) {

@@ -13,6 +13,14 @@ func parenthesize(name string, stmts ...Stmt) string {
 	return parts
 }
 
+func (x Caller) String() string {
+	if len(x.Args) == 0 {
+		return parenthesize(x.Name.Lexeme)
+	} else {
+		return fmt.Sprintf("(%s, %d args)", x.Name.Lexeme, len(x.Args))
+	}
+}
+
 func (x Equality) String() string {
 	return parenthesize(x.Operator.Lexeme, x.Left, x.Right)
 }
@@ -42,7 +50,7 @@ func (x Sequence) String() string {
 }
 
 func (x Identifier) String() string {
-	return fmt.Sprintf("%v", x.Name)
+	return x.Name.Lexeme
 }
 
 func (x Assign) String() string {

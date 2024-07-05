@@ -19,7 +19,8 @@ type Variable struct {
 type Scope struct {
 	Statements []Stmt
 	Values     map[string]Variable
-	Parent     *Scope // Cactus-Stack
+	Parent     *Scope   // Cactus-Stack
+	Owner      *Package // Package it belongs
 }
 
 func (s *Scope) Init() {
@@ -57,7 +58,7 @@ func (s *Scope) Get(name l.Token) (int, any, bool, error) {
 		}
 		currentScope = currentScope.Parent
 	}
-	return UNKNOWN, nil, false, e.Error(name.Line, name.Column, name.Lexeme, e.RUNTIME, "variable not found")
+	return UNKNOWN, nil, false, e.Error(name.Line, name.Column, name.Lexeme, e.VARIABLE_NOT_FOUND, "variable not found")
 }
 
 func (s *Scope) Set(target l.Token, newValue any) (any, error) {
@@ -105,5 +106,16 @@ func (s *Scope) Debug() {
 	for i, j := range s.Values {
 		prompt = "%s = {Type: %s, Value: %v, TypeDefined: %v, Mutable: %v, Nullable: %v, Initialized: %v}\n"
 		fmt.Printf(prompt, i, typeToString(j.Type), j.Value, j.TypeDefined, j.Mutable, j.Nullable, j.Initialized)
+	}
+}
+
+func (s *Scope) GetFunction(name l.Token) (FnStmt, error) {
+	fn, found := s.Owner.Functions[name.Lexeme]
+	if !found {
+		return fn, e.Error(name.Line, name.Column, name.Lexeme, e.FUNCTION_NOT_FOUND, "function not found")
+	} else {
+		newFn := fn
+		newFn.Context.Init()
+		return newFn, nil
 	}
 }

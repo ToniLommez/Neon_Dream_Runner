@@ -87,7 +87,7 @@ func runRepl() error {
 	}
 }
 
-// TODO: transfer anything that belongs do "n" to a new package named neon and encapsulate everything
+// TODO: transfer anything that belongs to "n" to a new package named neon and encapsulate everything
 // TODO: fork into runRepl and runFile
 func run(input string, isFile bool, neon *p.Program) (depth int, err error) {
 	// Scan new tokens
@@ -115,10 +115,19 @@ func run(input string, isFile bool, neon *p.Program) (depth int, err error) {
 	// If correctly parsed save the statement
 	neon.Tokens = neon.TokensBuffer
 	neon.TokensBuffer = nil
-	neon.Main.Statements = statement
+	for _, v := range statement {
+		if isFn, fn := neon.IsFunction(v); isFn {
+			neon.Packages[0].Functions[fn.Name.Lexeme] = fn
+		} else {
+			neon.Packages[0].Main.Statements = statement // in REPL it delete previous statements
+		}
+	}
+	if len(statement) == 0 {
+		neon.Packages[0].Main.Statements = statement
+	}
 
 	// Evaluate the AST
-	res, err := neon.Main.Interpret()
+	res, err := neon.Packages[0].Main.Interpret()
 	if err != nil {
 		return 0, err
 	}

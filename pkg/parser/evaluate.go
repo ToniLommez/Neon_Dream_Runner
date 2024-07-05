@@ -22,10 +22,12 @@ func (s *Scope) Interpret() (any, error) {
 
 func (s *Scope) evaluate(instruction any) (any, error) {
 	switch i := instruction.(type) {
+	case FnStmt:
+		return s.FnEval(i)
 	case LetStmt:
 		return s.LetEval(i)
 	case IfStmt:
-		return s.IfStmt(i)
+		return s.IfEval(i)
 	case PutStmt:
 		return s.PutEval(i)
 	case WhileStmt:
@@ -76,6 +78,8 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 		return s.CastEval(i)
 	case Identifier:
 		return s.IdentifierEval(i)
+	case Caller:
+		return s.CallerEval(i)
 	case Literal:
 		return i.Value, nil
 	case Type:

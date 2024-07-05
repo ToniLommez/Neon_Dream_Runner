@@ -27,7 +27,7 @@ fn merge_sort(arr: [int]) => [int] {
     let left = arr[:mid]  // Pega a metade esquerda
     let right = arr[mid:]  // Pega a metade direita
 
-    => merge(merge_sort left, merge_sort right)
+    => merge merge_sort left merge_sort right
 }
 
 fn main {
