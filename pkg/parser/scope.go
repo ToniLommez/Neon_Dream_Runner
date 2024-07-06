@@ -39,8 +39,8 @@ shadowing: // just some weird optimization
 		s.Values[name] = tmp
 	}
 
-	defined := l.Type != UNDEFINED && l.Type != UNKNOWN && l.Type != NIL
-	s.Values[l.Name.Lexeme] = Variable{Type: l.Type, Value: value, TypeDefined: defined, Mutable: l.Mutable, Nullable: l.Nullable, Initialized: l.Initializer != nil}
+	defined := l.Type != nil
+	s.Values[l.Name.Lexeme] = Variable{Type: getType(l.Type), Value: value, TypeDefined: defined, Mutable: l.Mutable, Nullable: l.Nullable, Initialized: l.Initializer != nil}
 
 	return value, nil
 }
@@ -88,6 +88,9 @@ func (s *Scope) Set(target l.Token, newValue any) (any, error) {
 	}
 
 	tp := getType(newValue)
+	if tp == INT && v.Type == FLOAT { // TODO: remove this
+		tp = FLOAT
+	}
 	if v.TypeDefined && v.Type != tp && newValue != nil {
 		return nil, e.Error(target.Line, target.Column, target.Lexeme, e.RUNTIME, "expected type to assign: "+typeToString(v.Type)+", found: "+typeToString(tp))
 	}

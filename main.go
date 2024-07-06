@@ -127,17 +127,17 @@ func run(input string, isFile bool, neon *p.Program) (depth int, err error) {
 	}
 
 	// Evaluate the AST
-	res, err := neon.Packages[0].Main.Interpret()
+	_, err = neon.Packages[0].Main.Interpret()
 	if err != nil {
 		return 0, err
 	}
 
-	if res != nil {
+	/* if res != nil {
 		tmp := fmt.Sprintf("%v", res)
 		color := "\033[38;2;150;240;240m"
 		reset := "\033[0m"
 		fmt.Printf("%s%v%s\n", color, strings.Replace(tmp, "\\n", "\n", -1), reset)
-	}
+	} */
 
 	return 0, nil
 }

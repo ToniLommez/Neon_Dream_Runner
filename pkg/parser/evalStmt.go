@@ -60,33 +60,55 @@ func (s *Scope) IfEval(i IfStmt) (any, error) {
 	return nil, nil
 }
 
-func (s *Scope) LetEval(l LetStmt) (any, error) {
-	var value any
+func (s *Scope) LetEval(x LetStmt) (any, error) {
+	// var typing any
+	var initType int
+	var init any
 	var err error
 
-	if l.Initializer != nil {
-		value, err = s.evaluate(l.Initializer)
-		if err != nil {
+	if x.Initializer != nil {
+		if init, err = s.evaluate(x.Initializer); err != nil {
 			return nil, err
 		}
 
-		valueType := getType(value)
-		if valueType == UNKNOWN || valueType == UNDEFINED {
-			return nil, e.Error(l.Name.Line, 0, "", e.RUNTIME, fmt.Sprintf("let statement evaluate to unknown type: %v", value))
+		// TODO: fix this shit...
+		switch i := init.(type) {
+		case ArrayType:
+			vs := make([]any, i.MaxSize.(int))
+			init = Slice{Typing: i.Typing, Size: i.MaxSize.(int), Values: vs, IsArray: true}
 		}
 
-		if l.Type == UNDEFINED {
-			l.Type = valueType
-		} else if l.Type != valueType {
-			return nil, e.Error(l.Name.Line, 0, "", e.RUNTIME, fmt.Sprintf("let statement expected %s, found %s", typeToString(l.Type), typeToString(valueType)))
+		initType = getType(init)
+		if initType == UNKNOWN || initType == UNDEFINED {
+			return nil, e.Error(x.Name.Line, 0, "", e.RUNTIME, fmt.Sprintf("let statement evaluate to unknown type: %v", init))
+		} else if initType == SLICE {
+			x.IsSlice = true
 		}
 
-		if valueType == NIL && !l.Nullable {
-			return nil, e.Error(l.Name.Line, 0, "", e.RUNTIME, "non nullable let statement received nil value")
+		// x.Type could be a Type or a Slice
+		if x.Type == nil {
+			if initType == SLICE {
+				initSlice := init.(Slice)
+				x.Type = ArrayType{Typing: initSlice.Typing, MaxSize: initSlice.Size, IsSlice: !initSlice.IsArray}
+			} else {
+				x.Type = Type{Name: l.Token{Type: anyToToken(init)}}
+			}
+		} else if initType != getType(x.Type) {
+			if getType(x.Type) == FLOAT && initType == INT { // HARD CODED BUG, TODO: REMOVE THIS
+				initType = FLOAT
+			} else {
+				return nil, e.Error(x.Name.Line, 0, "", e.RUNTIME, fmt.Sprintf("let statement expected %s, found %s", typeToString(getType(x.Type)), typeToString(initType)))
+			}
+		}
+
+		if initType == NIL && !x.Nullable {
+			return nil, e.Error(x.Name.Line, 0, "", e.RUNTIME, "non nullable let statement received nil value")
 		}
 	}
 
-	_, err = s.Define(l, value)
+	// TODO: define type without initialize
+
+	_, err = s.Define(x, init)
 	return nil, err
 }
 
@@ -99,10 +121,14 @@ func (s *Scope) PutEval(p PutStmt) (any, error) {
 	tmp := fmt.Sprintf("%v", expr)
 	color := "\033[38;2;150;240;240m"
 	reset := "\033[0m"
-	fmt.Printf("%s%v%s", color, strings.Replace(tmp, "\\n", "\n", -1), reset)
 
-	// TODO: remove this after implement printf
-	// fmt.Printf("\n")
+	formatted := strings.Replace(tmp, "\\n", "\n", -1)
+	formatted = strings.Replace(formatted, "\\x1b[H", "\x1b[H", -1)
+
+	fmt.Printf("%s%v%s", color, formatted, reset)
+	if p.NewLine {
+		fmt.Printf("\n")
+	}
 
 	return nil, nil
 }

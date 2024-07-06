@@ -14,7 +14,7 @@ type Sequence struct {
 }
 
 type Assign struct {
-	Target   l.Token
+	Target   Expr
 	Operator l.Token
 	Value    Expr
 }
@@ -138,11 +138,27 @@ type Caller struct {
 type Identifier struct {
 	Name l.Token
 }
+type Slice struct {
+	Typing  Expr
+	Size    int
+	Values  []any
+	IsArray bool
+}
 
-type ArrayLiteral struct {
-	Typing l.Token
-	Size   Expr
+type ArrayConstructor struct {
+	Typing     Expr
+	Values     Expr
+	ActualSize int
+}
+
+type ArrayLiteralRaw struct {
 	Values []Expr
+}
+
+type ArrayType struct {
+	Typing  Expr
+	MaxSize Expr
+	IsSlice bool
 }
 
 type Literal struct {

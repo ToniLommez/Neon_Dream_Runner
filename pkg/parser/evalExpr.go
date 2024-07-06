@@ -130,16 +130,40 @@ func (s *Scope) SequenceEval(x Sequence) (any, error) {
 	return s.evaluate(x.Right)
 }
 
-func (s *Scope) AssignEval(a Assign) (res any, err error) {
-	v, err := s.evaluate(a.Value)
-	if err != nil {
-		return
+// TODO: assign value to a slice befor it being inicialized
+func (s *Scope) AssignEval(a Assign) (any, error) {
+	var name lexer.Token
+	var position int
+	var isSlice bool
+	var defined bool
+	var slice Slice
+	var err error
+	var v, _ any // final value
+	var tv any   // token value
+
+	if v, err = s.evaluate(a.Value); err != nil {
+		return nil, err
 	}
 
-	_, tv, d, err := s.Get(a.Target)
-	if d {
+	switch target := a.Target.(type) {
+	case PositionAccess: // Slice
+		slice, position, err = s.PositionAccessMetadata(target)
 		if err != nil {
-			return
+			return nil, err
+		}
+		tv = slice.Values[position]
+		defined = true // change this during todo
+		isSlice = true
+	case Identifier:
+		name = target.Name
+		_, tv, defined, err = s.Get(target.Name)
+	default:
+		return nil, e.Error(0, 0, "", e.RUNTIME, "Invalid type to assign")
+	}
+
+	if defined {
+		if err != nil {
+			return nil, err
 		}
 
 		op := func(t lexer.Token, o lexer.TokenType) lexer.Token {
@@ -187,7 +211,12 @@ func (s *Scope) AssignEval(a Assign) (res any, err error) {
 		}
 	}
 
-	return s.Set(a.Target, v)
+	if isSlice {
+		slice.Values[position] = v
+		return v, nil
+	} else {
+		return s.Set(name, v)
+	}
 }
 
 func (s *Scope) TernaryEval(t Ternary) (any, error) {
@@ -758,6 +787,70 @@ func (s *Scope) UnaryEval(u Unary) (res any, err error) {
 	return res, err
 }
 
+func (s *Scope) PositionAccess(p PositionAccess) (any, error) {
+	var variable any
+	var position any
+	var err error
+
+	if variable, err = s.evaluate(p.Expression); err != nil {
+		return nil, err
+	}
+
+	if position, err = s.evaluate(p.Pos); err != nil {
+		return nil, err
+	}
+
+	switch slice := variable.(type) {
+	case Slice:
+		switch n := position.(type) {
+		case int:
+			if n >= 0 {
+				return slice.Values[n], nil
+			} else {
+				return nil, e.Error(0, 0, "", e.RUNTIME, "panic! array index cannot be negative 🙂")
+			}
+		case uint:
+			return slice.Values[n], nil
+		default:
+			return nil, e.Error(0, 0, "", e.RUNTIME, "should be a valid position")
+		}
+	default:
+		return nil, e.Error(0, 0, "", e.RUNTIME, "should be a slice to access")
+	}
+}
+
+func (s *Scope) PositionAccessMetadata(p PositionAccess) (Slice, int, error) {
+	var variable any
+	var position any
+	var err error
+
+	if variable, err = s.evaluate(p.Expression); err != nil {
+		return Slice{}, 0, err
+	}
+
+	if position, err = s.evaluate(p.Pos); err != nil {
+		return Slice{}, 0, err
+	}
+
+	switch slice := variable.(type) {
+	case Slice:
+		switch n := position.(type) {
+		case int:
+			if n >= 0 {
+				return slice, n, nil
+			} else {
+				return Slice{}, 0, e.Error(0, 0, "", e.RUNTIME, "panic! array index cannot be negative 🙂")
+			}
+		case uint:
+			return slice, int(n), nil
+		default:
+			return Slice{}, 0, e.Error(0, 0, "", e.RUNTIME, "should be a valid position")
+		}
+	default:
+		return Slice{}, 0, e.Error(0, 0, "", e.RUNTIME, "should be a slice to access")
+	}
+}
+
 func (s *Scope) CastEval(c Cast) (res any, err error) {
 	l, err := s.evaluate(c.Left)
 	if err != nil {
@@ -894,4 +987,61 @@ func (s *Scope) CallerEval(c Caller) (any, error) {
 	}
 
 	return s.FnEval(fn)
+}
+
+// TODO: incomplete
+func (s *Scope) ArrayConstructorEval(a ArrayConstructor) (any, error) {
+	var err error
+
+	if a.Typing, err = s.evaluate(a.Typing); err != nil {
+		return nil, err
+	}
+
+	switch typing := a.Typing.(type) {
+	case ArrayType:
+		switch values := a.Values.(type) {
+		case ArrayLiteralRaw:
+			var tmp any
+			vs := []any{}
+
+			// Evaluate all values
+			for _, v := range values.Values {
+				if tmp, err = s.evaluate(v); err != nil {
+					return nil, err
+				}
+				vs = append(vs, tmp)
+			}
+
+			// If it is an array, should fit the exact size
+			if !typing.IsSlice {
+				if len(vs) != typing.MaxSize {
+					return nil, e.Error(0, 0, "", e.RUNTIME, fmt.Sprintf("Array with size %d received %d values", len(vs), typing.MaxSize))
+				}
+			}
+
+			// TODO: assert values with array type
+
+			return Slice{Typing: typing.Typing, Size: len(vs), Values: vs, IsArray: !typing.IsSlice}, nil
+		default:
+			return nil, e.Error(0, 0, "", e.RUNTIME, "invalid array value")
+		}
+	default:
+		return nil, e.Error(0, 0, "", e.RUNTIME, "invalid array type")
+	}
+}
+
+func (s *Scope) ArrayTypeEval(a ArrayType) (any, error) {
+	var err error
+
+	if a.Typing, err = s.evaluate(a.Typing); err != nil {
+		return nil, err
+	}
+
+	if !a.IsSlice {
+		if a.MaxSize, err = s.evaluate(a.MaxSize); err != nil {
+			return nil, err
+		}
+	}
+
+	return a, nil
 }

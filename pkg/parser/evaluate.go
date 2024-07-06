@@ -69,7 +69,7 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 	case Access:
 		return nil, nil
 	case PositionAccess:
-		return nil, nil
+		return s.PositionAccess(i)
 	case Elvis:
 		return nil, nil
 	case Check:
@@ -82,10 +82,14 @@ func (s *Scope) evaluate(instruction any) (any, error) {
 		return s.CallerEval(i)
 	case Literal:
 		return i.Value, nil
+	case Slice:
+		return i, nil
+	case ArrayConstructor:
+		return s.ArrayConstructorEval(i)
+	case ArrayType:
+		return s.ArrayTypeEval(i)
 	case Type:
 		return i, nil
-	case ArrayLiteral:
-		return nil, nil
 	case Grouping:
 		return s.evaluate(i.Expression)
 	case Block:

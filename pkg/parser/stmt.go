@@ -37,13 +37,15 @@ type ExprStmt struct {
 }
 
 type PutStmt struct {
-	Value Expr
+	Value   Expr
+	NewLine bool
 }
 
 type LetStmt struct {
 	Name        lexer.Token
 	Mutable     bool
 	Nullable    bool
-	Type        int
+	Type        Expr
 	Initializer Expr
+	IsSlice     bool
 }

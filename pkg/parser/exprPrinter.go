@@ -125,8 +125,20 @@ func (x Check) String() string {
 	}
 }
 
-func (x ArrayLiteral) String() string {
-	return fmt.Sprintf("([%s: %v]%v)", x.Typing.Lexeme, x.Size, x.Values)
+func (x ArrayConstructor) String() string {
+	return fmt.Sprintf("([%v] %v - %v)", x.Typing, x.Values, x.ActualSize)
+}
+
+func (x ArrayType) String() string {
+	if x.IsSlice {
+		return fmt.Sprintf("[%v]", x.Typing)
+	} else {
+		return fmt.Sprintf("[%v: %d]", x.Typing, x.MaxSize)
+	}
+}
+
+func (x ArrayLiteralRaw) String() string {
+	return fmt.Sprintf("(%v)", x.Values)
 }
 
 func (x Literal) String() string {

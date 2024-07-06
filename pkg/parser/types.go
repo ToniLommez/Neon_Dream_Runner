@@ -14,12 +14,17 @@ const (
 	UINT
 	FLOAT
 	STRING
+	SLICE
 	NIL
 	UNDEFINED
 )
 
 func getType(t any) int {
-	switch t.(type) {
+	switch x := t.(type) {
+	case Type:
+		return tokenToType(x.Name)
+	case lexer.Token:
+		return tokenToType(x)
 	case bool:
 		return BOOL
 	case rune:
@@ -32,10 +37,35 @@ func getType(t any) int {
 		return FLOAT
 	case string:
 		return STRING
+	case Slice:
+		return SLICE
+	case ArrayType:
+		return SLICE
 	case nil:
 		return NIL
 	default:
 		return UNKNOWN
+	}
+}
+
+func anyToToken(t any) lexer.TokenType {
+	switch t.(type) {
+	case bool:
+		return lexer.BOOL
+	case rune:
+		return lexer.CHAR
+	case int:
+		return lexer.INT
+	case uint:
+		return lexer.UINT
+	case float64:
+		return lexer.FLOAT
+	case string:
+		return lexer.STRING
+	case nil:
+		return lexer.NIL
+	default:
+		return lexer.UNDEFINED
 	}
 }
 
@@ -78,6 +108,8 @@ func typeToString(t int) string {
 		return "FLOAT"
 	case STRING:
 		return "STRING"
+	case SLICE:
+		return "SLICE"
 	case NIL:
 		return "NIL"
 	case UNDEFINED:

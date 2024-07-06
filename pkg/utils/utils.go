@@ -26,3 +26,10 @@ func Ternary(b bool, x1 interface{}, x2 interface{}) interface{} {
 		return x2
 	}
 }
+
+// reverse reverses a slice of any type
+func Reverse[T any](slice []T) {
+	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
+		slice[i], slice[j] = slice[j], slice[i]
+	}
+}

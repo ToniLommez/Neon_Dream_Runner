@@ -121,6 +121,7 @@ const (
 	TRAIT          TokenType = "TRAIT"     // trait
 	THIS           TokenType = "THIS"      // this
 	PUT            TokenType = "PUT"       // put
+	PUTLN          TokenType = "PUTLN"     // putln
 	PRINT          TokenType = "PRINT"     // print
 	PRINTF         TokenType = "PRINTF"    // printf
 	PRINTLN        TokenType = "PRINTLN"   // println

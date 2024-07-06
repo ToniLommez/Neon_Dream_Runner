@@ -5,6 +5,7 @@ import (
 
 	e "github.com/ToniLommez/Neon_Dream_Runner/pkg/errutils"
 	l "github.com/ToniLommez/Neon_Dream_Runner/pkg/lexer"
+	"github.com/ToniLommez/Neon_Dream_Runner/pkg/utils"
 )
 
 type Parser struct {
@@ -91,7 +92,7 @@ func (p *Parser) function() (Stmt, error) {
 			}
 
 			// TODO: add mutability, nullability and etc
-			args = append(args, LetStmt{Name: varName, Mutable: true, Nullable: true, Type: tokenToType(varType), Initializer: nil})
+			args = append(args, LetStmt{Name: varName, Mutable: true, Nullable: true, Type: varType, Initializer: nil})
 
 			if !p.match(l.COMMA) {
 				break
@@ -129,7 +130,8 @@ func (p *Parser) function() (Stmt, error) {
 func (p *Parser) letStatement() (Stmt, error) {
 	var mutable, nullable bool
 	var initializer Expr
-	var name, varType l.Token
+	var varType Expr
+	var name l.Token
 	var err error
 
 	if p.match(l.BANG) {
@@ -144,11 +146,9 @@ func (p *Parser) letStatement() (Stmt, error) {
 		return nil, err
 	}
 
-	varType = l.Token{Type: l.UNDEFINED, Lexeme: "", Literal: "", Line: name.Line, Column: name.Column}
 	if p.match(l.COLON) {
-		varType = p.advance()
-		if !varType.Type.IsValidType() {
-			return nil, e.Error(varType.Line, varType.Column, varType.Lexeme, e.PARSER, "expect type in let statement")
+		if varType, err = p.primary(); err != nil {
+			return nil, err
 		}
 	}
 
@@ -160,21 +160,23 @@ func (p *Parser) letStatement() (Stmt, error) {
 	}
 
 	// Bad smell, but it's working... So, it's a problem for the future when it broke the whole thing
-	if t := p.peek().Type; t != l.RIGHT_BRACE && t != l.SEMICOLON {
+	if t := p.peek().Type; t != l.RIGHT_BRACE && t != l.SEMICOLON { // Semicolon is because of declaration on for statement
 		if _, err := p.consume(l.NEW_LINE); err != nil {
 			t := p.peek()
 			return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after let statement")
 		}
 	}
 
-	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Type: tokenToType(varType), Initializer: initializer}, nil
+	return LetStmt{Name: name, Mutable: mutable, Nullable: nullable, Type: varType, Initializer: initializer, IsSlice: false}, nil
 }
 
 func (p *Parser) statement() (Stmt, error) {
 	if p.match(l.FOR) {
 		return p.forStatement()
 	} else if p.match(l.PUT) {
-		return p.putStatement()
+		return p.putStatement(false)
+	} else if p.match(l.PUTLN) {
+		return p.putStatement(true)
 	} else if p.match(l.WHILE) {
 		return p.whileStatement()
 	}
@@ -277,7 +279,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 	return body, nil
 }
 
-func (p *Parser) putStatement() (Stmt, error) {
+func (p *Parser) putStatement(line bool) (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return expr, err
@@ -293,7 +295,7 @@ func (p *Parser) putStatement() (Stmt, error) {
 		return nil, e.Error(t.Line, t.Column, t.Lexeme, e.PARSER, "expect new line after print")
 	} */
 
-	return PutStmt{Value: expr}, nil
+	return PutStmt{Value: expr, NewLine: line}, nil
 }
 
 func (p *Parser) whileStatement() (Stmt, error) {
@@ -336,8 +338,7 @@ func (p *Parser) expression() (Expr, error) {
 	return p.statementExpression()
 }
 
-// Statements that ARE expressions
-// TODO: put blockStatement here
+// Statements that ARE expressions - TODO: put blockStatement here
 func (p *Parser) statementExpression() (Expr, error) {
 	if p.match(l.IF) {
 		return p.ifStatement()
@@ -353,11 +354,11 @@ func (p *Parser) sequence() (Expr, error) {
 	}
 
 	for p.match(l.COMMA) {
-		right, err := p.assign()
+		left, err := p.assign()
 		if err != nil {
 			return expr, err
 		}
-		expr = Sequence{expr, right}
+		expr = Sequence{Left: left, Right: expr}
 	}
 
 	return expr, nil
@@ -376,12 +377,7 @@ func (p *Parser) assign() (Expr, error) {
 			return expr, err
 		}
 
-		switch i := expr.(type) {
-		case Identifier:
-			expr = Assign{Target: i.Name, Operator: op, Value: right}
-		default:
-			return expr, e.Error(op.Line, op.Column, op.Lexeme, e.PARSER, "assignment target should be a identifier")
-		}
+		expr = Assign{Target: expr, Operator: op, Value: right}
 	}
 
 	return expr, nil
@@ -652,29 +648,15 @@ func (p *Parser) access() (Expr, error) {
 		return expr, err
 	}
 
-	for p.match(l.CHECK_NAV, l.BANG_NAV, l.DOT, l.LEFT_BRACKET) {
+	for p.match(l.CHECK_NAV, l.BANG_NAV, l.DOT) {
 		op := p.previous()
 
-		if op.Type == l.LEFT_BRACKET {
-			right, err := p.expression()
-			if err != nil {
-				return expr, err
-			}
-
-			expr = PositionAccess{Expression: expr, Pos: right}
-
-			if _, err := p.consume(l.RIGHT_BRACKET); err != nil {
-				return expr, err
-			}
-		} else {
-			right, err := p.validate()
-			if err != nil {
-				return expr, err
-			}
-
-			expr = Access{Left: expr, Right: right, Operator: op}
+		right, err := p.validate()
+		if err != nil {
+			return expr, err
 		}
 
+		expr = Access{Left: expr, Right: right, Operator: op}
 	}
 
 	return expr, nil
@@ -762,7 +744,29 @@ func (p *Parser) identifier(couldBeFunction bool) (Expr, error) {
 		id := p.previous()
 		args := []Expr{}
 
-		if couldBeFunction {
+		// Consider it could be a Position Access
+		var isAccess bool
+		var expr Expr
+		var err error
+		var pos Expr
+
+		expr = Identifier{id}
+		for p.match(l.LEFT_BRACKET) {
+			isAccess = true
+			if pos, err = p.expression(); err != nil {
+				return nil, err
+			}
+
+			if _, err := p.consume(l.RIGHT_BRACKET); err != nil {
+				return nil, err
+			}
+
+			expr = PositionAccess{Expression: expr, Pos: pos}
+		}
+
+		if isAccess {
+			return expr, nil
+		} else if couldBeFunction {
 			// if it has other identifiers after, it is a caller
 			// otherwise just a normal identifier
 			for {
@@ -782,7 +786,8 @@ func (p *Parser) identifier(couldBeFunction bool) (Expr, error) {
 		}
 
 		if len(args) == 0 {
-			return Identifier{id}, nil
+			expr = Identifier{id}
+			return expr, nil
 		} else {
 			return Caller{Name: id, Args: args}, nil
 		}
@@ -817,65 +822,100 @@ func (p *Parser) typeName(onlyType bool) (Expr, error) {
 		token := p.peek()
 		return nil, e.Error(token.Line, token.Column, token.Lexeme, e.PARSER, fmt.Sprintf("expected a type: %v", token))
 	} else {
-		return p.mapLiteral()
+		return p.array()
 	}
 }
 
-func (p *Parser) mapLiteral() (Expr, error) {
-	current := p.peek()
-	if current.Type == l.LEFT_BRACKET {
-		if _, next := p.peekN(1); next.Type.IsType() {
-			return p.arrayLiteral()
+func (p *Parser) array() (Expr, error) {
+	if p.match(l.LEFT_BRACKET) {
+		var expr Expr
+		var err error
+
+		if expr, err = p.expression(); err != nil {
+			return nil, err
 		}
-	} /* else if x.Type == l.LEFT_PAREN {
 
-	} else if x.Type == l.OR_BITWISE {
+		switch expr.(type) {
+		case Type:
+			return p.arrayType(expr)
+		case ArrayType:
+			return p.arrayType(expr)
+		default:
+			return p.arrayLiteral(expr, true)
+		}
+	}
 
-	} */
 	return p.group()
 }
 
-func (p *Parser) arrayLiteral() (Expr, error) {
-	p.advance()
-	arrayType := p.advance()
-	if _, err := p.consume(l.COLON); err != nil {
+func (p *Parser) arrayLiteral(expr Expr, inferDeclaration bool) (Expr, error) {
+	var values []Expr
+	var literal Expr
+	var err error
+
+loop:
+	switch e := expr.(type) {
+	case Sequence:
+		values = append(values, e.Left)
+		expr = e.Right
+		goto loop
+	default:
+		values = append(values, e)
+	}
+
+	utils.Reverse[Expr](values)
+
+	if _, err = p.consume(l.RIGHT_BRACKET); err != nil {
 		return nil, err
 	}
 
-	arraySize, err := p.expression()
-	if err != nil {
-		return nil, err
+	literal = ArrayLiteralRaw{Values: values}
+	if inferDeclaration {
+		return ArrayConstructor{Typing: nil, Values: literal, ActualSize: len(values)}, nil
+	} else {
+		return literal, nil
+	}
+}
+
+func (p *Parser) arrayType(expr Expr) (Expr, error) {
+	var arraySize Expr
+	var arrayType Expr
+	var isSlice bool
+	var literal Expr
+	var err error
+
+	// If have size is an array, if not is a slice
+	if p.match(l.COLON) {
+		arraySize, err = p.expression()
+		isSlice = false
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		isSlice = true
 	}
 
 	if _, err := p.consume(l.RIGHT_BRACKET); err != nil {
 		return nil, err
 	}
 
-	if _, err := p.consume(l.LEFT_BRACKET); err != nil {
-		return nil, err
-	}
+	arrayType = ArrayType{Typing: expr, MaxSize: arraySize, IsSlice: isSlice}
 
-	if p.check(l.RIGHT_BRACKET) {
-		return ArrayLiteral{Typing: arrayType, Size: arraySize, Values: []Expr{}}, nil
-	} else {
-		var values []Expr
+	if p.match(l.LEFT_BRACKET) {
+		var expr Expr
+		var err error
 
-		for {
-			value, err := p.expression()
-			if err != nil {
-				return nil, err
-			}
-			values = append(values, value)
-			if !p.match(l.COMMA) {
-				break
-			}
-		}
-
-		if !p.match(l.RIGHT_BRACKET) {
+		if expr, err = p.expression(); err != nil {
 			return nil, err
 		}
 
-		return ArrayLiteral{Typing: arrayType, Size: arraySize, Values: values}, nil
+		if literal, err = p.arrayLiteral(expr, false); err != nil {
+			return nil, err
+		}
+
+		return ArrayConstructor{Typing: arrayType, Values: literal, ActualSize: len(literal.(ArrayLiteralRaw).Values)}, nil
+	} else {
+		return arrayType, nil //ArrayType
 	}
 }
 
